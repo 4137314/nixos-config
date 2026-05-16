@@ -17,13 +17,14 @@
     nixosConfigurations.nixos-hacker-box = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       specialArgs = { inherit inputs; };
-      modules = [
+	modules = [
         ./configuration.nix
         home-manager.nixosModules.home-manager
         {
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
-          home-manager.extraSpecialArgs = { inherit inputs; }; # Passa gli inputs (incluso l'unstable) a home.nix
+          # QUESTA RIGA PASSA GLI INPUTS A HOME.NIX
+          home-manager.extraSpecialArgs = { inherit inputs; }; 
           home-manager.users.main = import ./home.nix;
         }
       ];

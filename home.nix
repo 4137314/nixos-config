@@ -1,14 +1,13 @@
-{ config, pkgs, ... }:
+{ config, pkgs, inputs, ... }:
 
 {
   home.username = "main";
   home.homeDirectory = "/home/main";
 
-home.packages = [
-    # Pesca Neovim dall'unstable ufficiale (Versione 0.12+)
+  home.packages = [
+    # Ora 'inputs' sarà riconosciuto senza errori!
     inputs.nixpkgs-unstable.legacyPackages.${pkgs.system}.neovim-unwrapped
 
-    # I tuoi fix per telescope e lsp (lasciali così come sono)
     pkgs.ripgrep
     pkgs.fd
     pkgs.tree-sitter

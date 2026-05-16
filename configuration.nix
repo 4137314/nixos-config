@@ -1,9 +1,13 @@
 { config, lib, pkgs, ... }:
 
 {
-  imports = [ ./hardware-configuration.nix ];
+  imports = [ 
+    ./hardware-configuration.nix 
+    ./rgb.nix      # <-- IMPORTI I TUOI NUOVI MODULI QUI
+    ./audio.nix
+  ];
 
-  # --- BOOTLOADER (GRUB Setup) ---
+  # --- BOOTLOADER ---
   boot.loader = {
     efi = {
       canTouchEfiVariables = true;
@@ -13,71 +17,49 @@
       enable = true;
       device = "nodev";
       efiSupport = true;
-      useOSProber = true; # Rileva altri OS come Windows
-      configurationLimit = 10; # Evita di intasare il boot con 1000 vecchie versioni
+      useOSProber = true;
+      configurationLimit = 10;
     };
+  };
+
+  # --- FILE SYSTEMS ---
+  fileSystems."/mnt/archive" = {
+    device = "/dev/disk/by-label/archive";
+    fsType = "ext4";
+    options = [ "nofail" ]; 
   };
 
   # --- NETWORKING & LOCALE ---
   networking.hostName = "nixos-hacker-box";
   networking.networkmanager.enable = true;
-  time.timeZone = "Europe/Rome"; # Impostato per Trento/Italia
-  i18n.defaultLocale = "it_IT.UTF-8";
+  time.timeZone = "Europe/Rome";
+  i18n.defaultLocale = "en_US.UTF-8";
 
-  # --- SOUND (Pipewire: il top per Wayland) ---
-  security.rtkit.enable = true;
-  services.pipewire = {
-    enable = true;
-    alsa.enable = true;
-    alsa.support32Bit = true;
-    pulse.enable = true;
+  # --- DISPLAY MANAGER (Ly gestisce l'avvio, Hyprland lo lasciamo a Home Manager) ---
+  services.displayManager.ly.enable = true;
+  services.displayManager.ly.settings = {
+    animation = "matrix";
+    save = true;
   };
-
-  # --- DISPLAY MANAGER & WINDOW MANAGER ---
-  programs.hyprland.enable = true;
-  
-  services.greetd = {
-    enable = true;
-    settings = {
-      default_session = {
-        command = "${pkgs.greetd.tuigreet}/bin/tuigreet --time --remember --cmd Hyprland";
-        user = "greeter";
-      };
-    };
-  };
-
-  # Fix per far apparire tuigreet correttamente
-  systemd.services.greetd.serviceConfig = {
-    Type = "idle";
-    StandardInput = "tty";
-    StandardOutput = "tty";
-    StandardError = "journal"; # Logga gli errori se non parte
-    TTYReset = true;
-    TTYVHangup = true;
-    TTYVTDisallocate = true;
-  };
+  # Richiesto da Home Manager per far funzionare correttamente i portali XDG (schermate, popup, ecc.)
+  environment.pathsToLink = [ "/share/applications" "/share/xdg-desktop-portal" ];
 
   # --- USER CONFIGURATION ---
+  users.groups.i2c = {}; 
   users.users.main = {
     isNormalUser = true;
     description = "Main User";
-    extraGroups = [ "wheel" "networkmanager" "video" "audio" ];
+    extraGroups = [ "wheel" "networkmanager" "video" "audio" "i2c" "input" ]; 
     shell = pkgs.zsh;
   };
 
-
   # --- SYSTEM PACKAGES ---
   environment.systemPackages = with pkgs; [
-    # Core
-    kitty neovim git wget curl
-    # Wayland Tools
-    wofi waybar cliphist wl-clipboard swww libnotify
-    # Utilities
-    firefox dolphin fastfetch starship htop
-    # Mercenario Tools (Inizio arsenale)
-    python3 gnumake gcc binutils
-    tree-sitter
-    tree
+    easyeffects pavucontrol helvum
+    kitty neovim git wget curl firefox fastfetch starship htop
+    wofi cliphist wl-clipboard swww libnotify ddcutil waybar hyprlock hypridle
+    python3 gnumake gcc binutils tree-sitter tree wl-gammarelay-rs iputils
+    openrgb usbutils i2c-tools swayosd
   ];
 
   # --- SHELL & PROGRAMS ---
@@ -87,24 +69,22 @@
     syntaxHighlighting.enable = true;
     shellAliases = {
       ll = "ls -l";
-      update = "sudo nixos-rebuild switch";
-      conf = "sudoedit /etc/nixos/configuration.nix"; # Uso sudoedit come suggerito!
+      update = "sudo nixos-rebuild switch --flake /etc/nixos/#nixos-hacker-box";
+      conf = "sudo -E nvim /etc/nixos/configuration.nix";
       v = "nvim";
+      red-alert = "openrgb --mode static --color FF0000";
+      rgb-off = "openrgb --mode static --color 000000";
     };
     promptInit = "eval \"$(starship init zsh)\"";
   };
 
   # --- FONTS ---
   fonts.packages = with pkgs; [
-    noto-fonts
-    noto-fonts-emoji
-    font-awesome
-    (nerdfonts.override { fonts = [ "JetBrainsMono" ]; })
+    noto-fonts noto-fonts-color-emoji font-awesome nerd-fonts.jetbrains-mono
   ];
 
-  # --- SECURITY & EXTRA ---
-  nix.settings.experimental-features = [ "nix-command" "flakes" ]; # Ti servirà per il futuro
-  nixpkgs.config.allowUnfree = true; # Necessario per driver e software proprietario
-
-  system.stateVersion = "23.11"; 
+  # --- SECURITY & FLAKES ---
+  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  nixpkgs.config.allowUnfree = true;
+  system.stateVersion = "25.11"; 
 }

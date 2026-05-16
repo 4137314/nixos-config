@@ -1,23 +1,24 @@
-{ config, pkgs, inputs, ... }:
+{ config, pkgs, ... }:
 
 {
   home.username = "main";
   home.homeDirectory = "/home/main";
 
-  # --- NEOVIM NIGHTLY E DIPENDENZE DI SISTEMA ---
   home.packages = [
-    # Il tuo Neovim 0.12.2
-    inputs.neovim-nightly-flake.packages.${pkgs.system}.default
+    # Il tuo pacchetto neovim (lascia quello che hai funzionante, es. pkgs.neovim)
+    pkgs.neovim
 
-    # Dipendenze fondamentali per Telescope e la ricerca dei file
+    # BINARI ESSENZIALI RICHIESTI DAL TUO LOG (Risolve gli ERROR di Telescope e Treesitter)
     pkgs.ripgrep
     pkgs.fd
+    pkgs.tree-sitter
 
-    # Ambienti di runtime per LSP e plugin avanzati (Node & Python)
-    pkgs.nodejs_22
+    # Fornisce il runtime Python funzionante per i plugin (Risolve il WARNING dei provider)
     pkgs.python311
-    pkgs.python311Packages.pynvim # Risolve l'errore dell'import di neovim in Python
-    pkgs.luarocks                  # Fornisce luarocks nativo globale
+    pkgs.python311Packages.pynvim
+    
+    # Node.js per i server LSP se li usi
+    pkgs.nodejs_22
   ];
 
   wayland.windowManager.hyprland = {

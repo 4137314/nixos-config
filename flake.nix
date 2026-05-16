@@ -1,11 +1,11 @@
 {
   description = "NixOS Flake Configuration per Hacker Box";
 
-inputs = {
+  inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
     
-    # URL esplicito per evitare il 404 dell'API di GitHub
-    neovim-nightly-flake.url = "github:nix-community/neovim-nightly-flake?ref=master";
+    # URL Corretto che punta al branch 'main' per evitare il 404 di GitHub
+    neovim-nightly-flake.url = "github:nix-community/neovim-nightly-flake/main";
     
     home-manager = {
       url = "github:nix-community/home-manager/release-25.11";

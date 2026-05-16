@@ -4,21 +4,17 @@
   home.username = "main";
   home.homeDirectory = "/home/main";
 
-  home.packages = [
-    # Il tuo pacchetto neovim (lascia quello che hai funzionante, es. pkgs.neovim)
-    pkgs.neovim
+home.packages = [
+    # Pesca Neovim dall'unstable ufficiale (Versione 0.12+)
+    inputs.nixpkgs-unstable.legacyPackages.${pkgs.system}.neovim-unwrapped
 
-    # BINARI ESSENZIALI RICHIESTI DAL TUO LOG (Risolve gli ERROR di Telescope e Treesitter)
+    # I tuoi fix per telescope e lsp (lasciali così come sono)
     pkgs.ripgrep
     pkgs.fd
     pkgs.tree-sitter
-
-    # Fornisce il runtime Python funzionante per i plugin (Risolve il WARNING dei provider)
+    pkgs.nodejs_22
     pkgs.python311
     pkgs.python311Packages.pynvim
-    
-    # Node.js per i server LSP se li usi
-    pkgs.nodejs_22
   ];
 
   wayland.windowManager.hyprland = {

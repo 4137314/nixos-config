@@ -1,0 +1,4 @@
+# Configurazione statix (linter Nix)
+# hardware-configuration.nix è auto-generato da nixos-generate-config: ignoralo.
+[global]
+ignore = ["hardware-configuration.nix"]

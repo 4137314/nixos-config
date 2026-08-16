@@ -1,19 +1,18 @@
-{ ... }:
+_:
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Entry point Home Manager per l'utente "main".
-# I dettagli sono delegati ai moduli sotto home/.
+# Display Manager: Ly (TUI, leggero, con animazione matrix).
+# Hyprland è avviato da Ly tramite la sessione Home Manager.
 # ─────────────────────────────────────────────────────────────────────────────
 {
-  imports = [
-    ./home/packages.nix
-    ./home/vscode.nix
-    ./home/hyprland.nix
-  ];
-
-  home = {
-    username      = "main";
-    homeDirectory = "/home/main";
-    stateVersion  = "25.11";
+  services.displayManager.ly = {
+    enable   = true;
+    settings = {
+      animation = "matrix";
+      save      = true;
+    };
   };
+
+  # Portali XDG richiesti da Hyprland per screenshot, file picker, ecc.
+  environment.pathsToLink = [ "/share/applications" "/share/xdg-desktop-portal" ];
 }

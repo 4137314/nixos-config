@@ -1,0 +1,38 @@
+name: NixOS Config Check
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  check:
+    name: Evaluate & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Valida struttura flake
+        run: nix flake check --no-build
+
+      - name: Valuta configurazione NixOS
+        # Forza la valutazione completa del modulo — cattura errori di tipo e sintassi
+        run: |
+          nix eval \
+            .#nixosConfigurations.nixos-hacker-box.config.networking.hostName \
+            --json
+
+      - name: Lint (statix)
+        run: nix run nixpkgs#statix -- check .
+
+      - name: Dead code (deadnix)
+        run: nix run nixpkgs#deadnix -- --fail --exclude ./hardware-configuration.nix .

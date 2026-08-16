@@ -1,9 +1,16 @@
-{ pkgs, ... }:
+/*
+  configuration.nix — System-level NixOS configuration.
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Configurazione sistema principale.
-# I dettagli sono delegati ai moduli sotto modules/.
-# ─────────────────────────────────────────────────────────────────────────────
+  This file is intentionally thin: it handles identity (hostname, users,
+  storage, boot) and delegates everything else to the modules under modules/.
+
+  Module tree
+  -----------
+  modules/hardware/   Hardware drivers and peripheral control.
+  modules/workstation Desktop environment, shell, and system packages.
+  modules/nas/        Network-attached storage services.
+*/
+{ pkgs, ... }:
 {
   imports = [
     ./hardware-configuration.nix
@@ -16,7 +23,10 @@
     ./modules/nas/syncthing.nix
   ];
 
-  # ── Bootloader ─────────────────────────────────────────────────────────────
+  # ---------------------------------------------------------------------------
+  # Boot
+  # ---------------------------------------------------------------------------
+
   boot.loader = {
     efi = {
       canTouchEfiVariables = true;
@@ -27,35 +37,64 @@
       device             = "nodev";
       efiSupport         = true;
       useOSProber        = true;
+      # Keep at most 10 generations in the GRUB menu.
       configurationLimit = 10;
     };
   };
 
-  # ── Storage ────────────────────────────────────────────────────────────────
-  # Disco secondario (etichetta "archive"). nofail = non blocca il boot se assente.
+  # ---------------------------------------------------------------------------
+  # Storage
+  # ---------------------------------------------------------------------------
+
+  # Secondary disk labelled "archive".
+  # nofail prevents the boot sequence from blocking when the disk is absent.
   fileSystems."/mnt/archive" = {
     device  = "/dev/disk/by-label/archive";
     fsType  = "ext4";
     options = [ "nofail" ];
   };
 
-  # ── Rete & Locale ──────────────────────────────────────────────────────────
-  networking.hostName              = "nixos-hacker-box";
-  networking.networkmanager.enable = true;
-  time.timeZone                    = "Europe/Rome";
-  i18n.defaultLocale               = "en_US.UTF-8";
+  # ---------------------------------------------------------------------------
+  # Networking & locale
+  # ---------------------------------------------------------------------------
 
-  # ── Utenti ────────────────────────────────────────────────────────────────
-  users.groups.i2c = {};
+  networking = {
+    hostName            = "nixos-hacker-box";
+    networkmanager.enable = true;
+  };
+
+  time.timeZone      = "Europe/Rome";
+  i18n.defaultLocale = "en_US.UTF-8";
+
+  # ---------------------------------------------------------------------------
+  # Users
+  # ---------------------------------------------------------------------------
+
+  users.groups.i2c = { };
+
   users.users.main = {
     isNormalUser = true;
     description  = "Main User";
-    extraGroups  = [ "wheel" "networkmanager" "video" "audio" "i2c" "input" "docker" ];
-    shell        = pkgs.zsh;
+    extraGroups  = [
+      "wheel"
+      "networkmanager"
+      "video"
+      "audio"
+      "i2c"
+      "input"
+      "docker"
+    ];
+    shell = pkgs.zsh;
   };
 
-  # ── Nix ───────────────────────────────────────────────────────────────────
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
-  nixpkgs.config.allowUnfree         = true;
-  system.stateVersion                 = "25.11";
+  # ---------------------------------------------------------------------------
+  # Nix
+  # ---------------------------------------------------------------------------
+
+  nix.settings.experimental-features = [
+    "nix-command"
+    "flakes"
+  ];
+  nixpkgs.config.allowUnfree = true;
+  system.stateVersion        = "25.11";
 }

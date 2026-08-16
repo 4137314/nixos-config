@@ -1,14 +1,17 @@
-{ ... }:
+/*
+  home.nix — Home Manager entry point for user "main".
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Entry point Home Manager per l'utente "main".
-# I dettagli sono delegati ai moduli sotto home/.
-# ─────────────────────────────────────────────────────────────────────────────
+  All user-space configuration is delegated to the sub-modules under
+  modules/home/. This file only sets the identity attributes required by
+  Home Manager (username, home directory, state version).
+*/
+_:
 {
   imports = [
-    ./home/packages.nix
-    ./home/vscode.nix
-    ./home/hyprland.nix
+    ./modules/home/packages.nix
+    ./modules/home/vscode.nix
+    ./modules/home/hyprland.nix
+    ./modules/home/neovim.nix
   ];
 
   home = {

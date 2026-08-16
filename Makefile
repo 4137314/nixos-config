@@ -1,78 +1,107 @@
-FLAKE    := /etc/nixos
-HOST     := nixos-hacker-box
-TARGET   := .$(shell echo '\#')nixosConfigurations.$(HOST)
+FLAKE  := /etc/nixos
+HOST   := nixos-hacker-box
+# The # character starts a Make comment, so we use a shell trick to embed it.
+TARGET := .$(shell echo '\#')nixosConfigurations.$(HOST)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Comandi principali
-# ─────────────────────────────────────────────────────────────────────────────
+NIX_FILES := $(FLAKE)/flake.nix $(FLAKE)/configuration.nix $(FLAKE)/home.nix \
+             $(shell find $(FLAKE)/modules -name '*.nix' 2>/dev/null)
 
-.PHONY: help switch dry check eval lint dead fmt commit update-flake
+.PHONY: help switch dry check eval lint dead fmt fmt-check git-add commit update-flake
 
-## Mostra questo help
+# ──────────────────────────────────────────────────────────────────────────────
+# Default target
+# ──────────────────────────────────────────────────────────────────────────────
+
 help:
-	@grep -E '^##' Makefile | sed 's/## //'
+	@echo "nixos-hacker-box — available targets"
+	@echo ""
+	@echo "  Build"
+	@echo "    switch        Apply the configuration to the live system"
+	@echo "    dry           Dry-activate (preview without applying)"
+	@echo ""
+	@echo "  CI / Quality"
+	@echo "    check         Full pipeline: eval + lint + dead-code check"
+	@echo "    eval          Evaluate the NixOS config (no build)"
+	@echo "    lint          Run statix (Nix anti-pattern linter)"
+	@echo "    dead          Run deadnix (unused binding detector)"
+	@echo "    fmt-check     Verify nixfmt formatting without modifying files"
+	@echo ""
+	@echo "  Formatting"
+	@echo "    fmt           Auto-format all .nix files with nixfmt-rfc-style"
+	@echo ""
+	@echo "  Git"
+	@echo "    git-add       Stage all changes (required before nix eval)"
+	@echo "    commit        Stage all and create a git commit"
+	@echo ""
+	@echo "  Maintenance"
+	@echo "    update-flake  Bump all flake inputs and update flake.lock"
 
-## [BUILD] Applica la configurazione al sistema
-switch:
-	git add -A
-	sudo nixos-rebuild switch --flake $(FLAKE)#$(HOST)
+# ──────────────────────────────────────────────────────────────────────────────
+# Build
+# ──────────────────────────────────────────────────────────────────────────────
 
-## [BUILD] Dry-run: mostra cosa cambierebbe senza applicare
-dry:
-	git add -A
-	sudo nixos-rebuild dry-activate --flake $(FLAKE)#$(HOST)
+switch: git-add
+	sudo nixos-rebuild switch --flake $(FLAKE)\#$(HOST)
 
-## [CI] Pipeline completa: eval + lint + dead code
-check: git-add eval lint dead
-	@echo "✓ Tutti i check passati"
+dry: git-add
+	sudo nixos-rebuild dry-activate --flake $(FLAKE)\#$(HOST)
 
-## [CI] Valuta la struttura del flake (no build)
-flake-check:
-	git add -A
-	nix flake check --no-build
+# ──────────────────────────────────────────────────────────────────────────────
+# CI / Quality pipeline
+# ──────────────────────────────────────────────────────────────────────────────
 
-## [CI] Valuta la configurazione NixOS (cattura errori di modulo)
-eval:
-	@echo "→ Valutazione config NixOS..."
-	git add -A
-	nix eval $(TARGET).config.system.build.toplevel --json > /dev/null
-	@echo "✓ eval OK"
+check: eval lint dead
+	@echo ""
+	@echo "✓ All checks passed — safe to run 'make switch'"
 
-## [CI] Lint Nix con statix
-lint:
-	@echo "→ Lint (statix)..."
-	cd $(FLAKE) && nix run nixpkgs#statix -- check --ignore hardware-configuration.nix
-	@echo "✓ lint OK"
+eval: git-add
+	@echo "→ Evaluating NixOS configuration..."
+	@nix eval $(TARGET).config.system.build.toplevel --json > /dev/null
+	@echo "✓ eval"
 
-## [CI] Rileva codice Nix inutilizzato
-dead:
-	@echo "→ Dead code (deadnix)..."
-	nix run nixpkgs#deadnix -- --exclude $(FLAKE)/hardware-configuration.nix $(FLAKE)
-	@echo "✓ deadnix OK"
+lint: git-add
+	@echo "→ statix (Nix linter)..."
+	@cd $(FLAKE) && nix run nixpkgs#statix -- check \
+		--ignore hardware-configuration.nix
+	@echo "✓ statix"
 
-## [FMT] Formatta tutti i file .nix con nixfmt
+dead: git-add
+	@echo "→ deadnix (unused bindings)..."
+	@nix run nixpkgs#deadnix -- \
+		--exclude $(FLAKE)/hardware-configuration.nix \
+		$(FLAKE)
+	@echo "✓ deadnix"
+
+fmt-check:
+	@echo "→ Checking nixfmt formatting..."
+	@nix run nixpkgs#nixfmt-rfc-style -- --check $(NIX_FILES)
+	@echo "✓ fmt-check"
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Formatting
+# ──────────────────────────────────────────────────────────────────────────────
+
 fmt:
-	nix run nixpkgs#nixfmt-rfc-style -- \
-		$(FLAKE)/flake.nix \
-		$(FLAKE)/configuration.nix \
-		$(FLAKE)/home.nix \
-		$(shell find $(FLAKE)/modules $(FLAKE)/home -name '*.nix')
+	@echo "→ Formatting .nix files..."
+	@nix run nixpkgs#nixfmt-rfc-style -- $(NIX_FILES)
+	@echo "✓ fmt"
 
-## [GIT] Stage di tutti i file (necessario per Nix flake)
+# ──────────────────────────────────────────────────────────────────────────────
+# Git
+# ──────────────────────────────────────────────────────────────────────────────
+
 git-add:
-	git add -A
+	@git add -A
 
-## [GIT] Commit dopo rebuild riuscito
-commit:
-	git add -A
-	git diff --cached --quiet || git commit -m "nixos: update config"
+commit: git-add
+	@git diff --cached --quiet \
+		&& echo "Nothing to commit." \
+		|| git commit -m "nixos: update configuration"
 
-## [UPDATE] Aggiorna tutti gli input del flake
+# ──────────────────────────────────────────────────────────────────────────────
+# Maintenance
+# ──────────────────────────────────────────────────────────────────────────────
+
 update-flake:
-	nix flake update
-	@echo "✓ flake.lock aggiornato — esegui 'make switch' per applicare"
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Pipeline consigliata per modifiche alla config:
-#   make check && make switch && make commit
-# ─────────────────────────────────────────────────────────────────────────────
+	@nix flake update
+	@echo "✓ flake.lock updated — run 'make switch' to apply"

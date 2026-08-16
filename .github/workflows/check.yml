@@ -2,13 +2,21 @@ name: NixOS Config Check
 
 on:
   push:
-    branches: [master, main]
+    branches: [ master, main ]
   pull_request:
-    branches: [master, main]
+    branches: [ master, main ]
+
+# Cancel in-progress runs on the same branch when a new push arrives.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  check:
-    name: Evaluate & Lint
+  # ────────────────────────────────────────────────────────────────────────────
+  # Job 1: Evaluate the NixOS configuration (most expensive — runs in parallel)
+  # ────────────────────────────────────────────────────────────────────────────
+  eval:
+    name: Evaluate
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -21,18 +29,41 @@ jobs:
             experimental-features = nix-command flakes
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
-      - name: Valida struttura flake
+      - name: nix flake check (structure)
         run: nix flake check --no-build
 
-      - name: Valuta configurazione NixOS
-        # Forza la valutazione completa del modulo — cattura errori di tipo e sintassi
+      - name: Evaluate NixOS configuration
+        # Forces full module evaluation — catches type errors and option conflicts.
         run: |
           nix eval \
-            .#nixosConfigurations.nixos-hacker-box.config.networking.hostName \
-            --json
+            .#nixosConfigurations.nixos-hacker-box.config.system.build.toplevel \
+            --json > /dev/null
 
-      - name: Lint (statix)
-        run: nix run nixpkgs#statix -- check .
+  # ────────────────────────────────────────────────────────────────────────────
+  # Job 2: Lint (runs in parallel with eval)
+  # ────────────────────────────────────────────────────────────────────────────
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Dead code (deadnix)
-        run: nix run nixpkgs#deadnix -- --fail --exclude ./hardware-configuration.nix .
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+
+      - name: statix (Nix anti-pattern linter)
+        run: |
+          nix run nixpkgs#statix -- check \
+            --ignore hardware-configuration.nix
+
+      - name: deadnix (unused binding detector)
+        run: |
+          nix run nixpkgs#deadnix -- \
+            --fail \
+            --exclude ./hardware-configuration.nix \
+            .

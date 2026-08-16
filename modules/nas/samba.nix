@@ -1,16 +1,28 @@
-_:
+/*
+  nas/samba.nix — Samba SMB/CIFS file server for the local network.
 
-# ─────────────────────────────────────────────────────────────────────────────
-# NAS — Condivisione rete via SMB/CIFS (Samba).
-#
-# Accesso dalla rete locale:
-#   Windows : \\nixos-hacker-box\archive
-#   macOS   : smb://nixos-hacker-box.local/archive
-#   Linux   : smb://nixos-hacker-box.local/archive
-#
-# Prima configurazione (una tantum):
-#   sudo smbpasswd -a main
-# ─────────────────────────────────────────────────────────────────────────────
+  Share layout
+  ------------
+  archive   Maps to /mnt/archive (secondary disk, ext4).
+            Read/write for user "main", no guest access.
+
+  Network discovery
+  -----------------
+  Avahi (mDNS/DNS-SD) publishes the host as nixos-hacker-box.local on the
+  local network. macOS Finder and Linux file managers discover it
+  automatically; Windows clients can use the IP address directly.
+
+  Access paths
+  ------------
+  Windows   \\nixos-hacker-box\archive
+  macOS     smb://nixos-hacker-box.local/archive
+  Linux     smb://nixos-hacker-box.local/archive
+
+  First-time setup (run once after `nixos-rebuild switch`)
+  ---------------------------------------------------------
+    sudo smbpasswd -a main
+*/
+_:
 {
   services.samba = {
     enable       = true;
@@ -23,13 +35,12 @@ _:
         security        = "user";
         "map to guest"  = "never";
         "log level"     = "1";
-        # Performance
+        # Performance tuning
         "socket options" = "TCP_NODELAY IPTOS_LOWDELAY";
         "read raw"       = "yes";
         "write raw"      = "yes";
       };
 
-      # Share del disco archive montato su /mnt/archive
       archive = {
         path             = "/mnt/archive";
         comment          = "Archive Disk";
@@ -44,8 +55,6 @@ _:
     };
   };
 
-  # mDNS: rende il NAS raggiungibile come "nixos-hacker-box.local"
-  # su macOS e Linux senza configurare DNS manualmente.
   services.avahi = {
     enable   = true;
     nssmdns4 = true;

@@ -33,7 +33,7 @@ jobs:
 
       # Warms the Nix store across runs — big win for repeat CI on this flake.
       - name: Enable magic Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@v8
+        uses: DeterminateSystems/magic-nix-cache-action@v14
 
       - name: nix flake check (structure)
         run: nix flake check --no-build
@@ -63,7 +63,7 @@ jobs:
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
       - name: Enable magic Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@v8
+        uses: DeterminateSystems/magic-nix-cache-action@v14
 
       - name: statix (Nix anti-pattern linter)
         run: |
@@ -95,7 +95,7 @@ jobs:
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
       - name: Enable magic Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@v8
+        uses: DeterminateSystems/magic-nix-cache-action@v14
 
       - name: nixfmt --check
         run: |

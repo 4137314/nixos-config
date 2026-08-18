@@ -1,0 +1,59 @@
+name: Bug report
+description: A NixOS module in this flake misbehaves.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please fill in enough context that the fault
+        can be reproduced without asking you follow-up questions.
+
+  - type: input
+    id: module
+    attributes:
+      label: Affected module(s)
+      description: e.g. `modules/cloud/nextcloud.nix`
+      placeholder: modules/…/….nix
+    validations:
+      required: true
+
+  - type: textarea
+    id: symptom
+    attributes:
+      label: What happens
+      description: One paragraph. Include the exact error message from `make check` or `journalctl -u <unit>`.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: |
+        Sequence of commands starting from a fresh git clone. Include the exact
+        `make check` / `nixos-rebuild switch` output.
+      render: shell
+    validations:
+      required: true
+
+  - type: input
+    id: revision
+    attributes:
+      label: Repo revision (git commit SHA)
+    validations:
+      required: true
+
+  - type: input
+    id: nixos
+    attributes:
+      label: NixOS version
+      description: Output of `nixos-version`.
+    validations:
+      required: true

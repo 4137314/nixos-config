@@ -1,0 +1,18 @@
+version: 2
+updates:
+  # Keep pinned GitHub Actions fresh. Renovate handles Nix inputs
+  # (see .github/renovate.json).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "saturday"
+      time: "06:00"
+      timezone: "Europe/Rome"
+    labels:
+      - "deps"
+      - "ci"
+    commit-message:
+      prefix: "chore(ci)"
+      include: "scope"
+    open-pull-requests-limit: 3

@@ -8,7 +8,9 @@ Keep it concise; detailed notes live in the persistent memory directory.
 ## What this repo is
 
 Personal NixOS flake for **nixos-hacker-box** — a workstation running
-Hyprland + Home Manager, also serving as a local NAS (Samba + Syncthing).
+Hyprland + Home Manager, also serving as a local NAS (Samba + Syncthing),
+personal cloud (Nextcloud + Forgejo), media stack (Jellyfin), and
+pentest / bug-bounty rig.
 
 **Channel:** nixos-25.11 stable · unstable channel for Neovim only.
 
@@ -18,73 +20,91 @@ Hyprland + Home Manager, also serving as a local NAS (Samba + Syncthing).
 
 ```
 /etc/nixos/
-├── flake.nix               Flake entry point (inputs, unstable instantiation)
-├── configuration.nix       System: boot, network, users, storage + module imports
-├── home.nix                Home Manager entry point for user "main"
-├── hyprland.conf           Native Hyprland config (NOT managed by Nix — intentional)
+├── flake.nix               Flake entry point (inputs, devShell, formatter)
+├── configuration.nix       Import list — every concern is its own module
+├── modules/home/hyprland/hyprland.conf  Native Hyprland dotfile (unmanaged — read verbatim)
 ├── hardware-configuration.nix  Auto-generated — do NOT edit
 ├── Makefile                Dev pipeline (check, switch, dry, fmt, commit, …)
 ├── CLAUDE.md               ← this file
 ├── README.md               Human-readable documentation
+├── secrets/                sops-nix encrypted YAML lives here (edit with `sops`)
 ├── .statix.toml            statix linter config (ignores hardware-configuration.nix)
-├── .github/workflows/      CI: parallel eval + lint jobs on every push
+├── .github/workflows/      CI: eval + lint + fmt jobs in parallel, magic-nix-cache
 └── modules/
-    ├── hardware/
-    │   ├── audio.nix       PipeWire + low-latency clock profile
-    │   └── rgb.nix         OpenRGB + I2C kernel modules + udev rules
-    ├── workstation/
-    │   ├── display.nix     Ly display manager + XDG portal paths
-    │   ├── shell.nix       Zsh, aliases, starship, direnv + nix-direnv
-    │   └── packages.nix    System packages, fonts, Docker, env vars
-    ├── nas/
-    │   ├── samba.nix       Samba SMB share (/mnt/archive) + Avahi mDNS
-    │   └── syncthing.nix   Syncthing P2P sync daemon
-    └── home/
-        ├── packages.nix    User packages (ripgrep, lazygit, nixd, …)
-        ├── vscode.nix      VS Code + extensions (claude-code, nix-ide)
-        ├── hyprland.nix    Hyprland HM module + hyprexpo plugin injection
-        ├── neovim.nix      Neovim (unstable) + extraPackages + xdg.configFile
-        └── nvim/           Neovim Lua config — edit here, Nix symlinks to ~/.config/nvim/
-            ├── init.lua
-            └── lua/
-                ├── core/   options.lua, keymaps.lua, autocmds.lua
-                └── plugins/  tools/ (telescope, treesitter), ui/ (toogle, tree)
+    ├── hardware/           audio.nix, rgb.nix, default.nix
+    ├── system/             boot, networking, users, nix, openssh, fail2ban,
+    │                       secrets (sops), resilience (earlyoom/zram/microcode),
+    │                       hardening, peripherals (cups/sane — no BT/mic)
+    ├── workstation/        display.nix, shell.nix, packages.nix
+    ├── development/        default.nix — compilers, LSPs, containers, libvirt
+    ├── security/           pentest.nix, wordlists.nix
+    ├── nas/                storage.nix (Btrfs + snapper), samba.nix, syncthing.nix
+    ├── media/              jellyfin.nix, arr-stack.nix (disabled — VPN creds)
+    ├── cloud/              nextcloud.nix, forgejo.nix
+    ├── network/            tailscale.nix, adguard.nix, caddy.nix (TLS proxy)
+    ├── monitoring/         observability.nix (Prometheus + Grafana), loki.nix
+    ├── backup/             restic.nix (offsite), btrbk.nix (Btrfs replication)
+    └── home/               Home Manager modules — packages, vscode, hyprland,
+                            neovim, git, bash, tmux, ssh, cli-tools, kitty,
+                            firefox, waybar, nvim/ (Lua tree)
 ```
 
 ---
 
 ## Conventions
 
-| Rule | Rationale |
-|------|-----------|
-| Module arg `_:` for no args | statix W10 — empty patterns must use `_` |
-| Module arg `{ pkgs, ... }:` only list what is used | deadnix — unused lambda patterns are errors in CI |
-| Group repeated keys (`home = { … }`) | statix W20 |
-| English doc comments (`/* … */`) at top of every module | Readability + future nixdoc compatibility |
-| `unstable` passed via `extraSpecialArgs` from flake.nix | Single instantiation, no repeated `import inputs.nixpkgs-unstable` |
+| Rule                                                                | Rationale                                                          |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Module arg `_:` for no args                                         | statix W10 — empty patterns must use `_`                           |
+| Module arg `{ pkgs, ... }:` only list what is used                  | deadnix — unused lambda patterns are errors in CI                  |
+| Group repeated top-level keys: `programs = { X=…; Y=…; }`           | statix W20                                                         |
+| Same for `services`, `virtualisation`, `networking`, `boot`, `home` | statix W20                                                         |
+| English doc comments (`/* … */`) at the top of every module         | Readability + nixdoc compatibility                                 |
+| `unstable` passed via `extraSpecialArgs` from flake.nix             | Single instantiation, no repeated `import inputs.nixpkgs-unstable` |
+| `inputs` passed via `specialArgs` from flake.nix                    | Same reason                                                        |
+| Secrets NEVER in the Nix store: use sops-nix or `*File` options     | See modules/system/secrets.nix bootstrap docs                      |
 
 ---
 
 ## Files NOT to modify
 
 - `hardware-configuration.nix` — auto-generated by `nixos-generate-config`
-- `hyprland.conf` — intentionally unmanaged; edit natively
+- `modules/home/hyprland/hyprland.conf` — intentionally unmanaged; edit natively
 - `modules/home/nvim/` — edit Lua files here; they symlink to `~/.config/nvim/`
+- `secrets/*.yaml` — encrypted; use `sops secrets/secrets.yaml` to edit
 
 ---
 
 ## Key pipeline commands
 
 ```bash
-make check      # eval + statix + deadnix (no sudo needed)
-make dry        # sudo nixos-rebuild dry-activate
-make switch     # sudo nixos-rebuild switch
-make fmt        # reformat all .nix files with nixfmt-rfc-style
-make commit     # git add -A && git commit
+make check         # eval + statix + deadnix (no sudo needed)
+make dry           # sudo nixos-rebuild dry-activate
+make switch        # sudo nixos-rebuild switch
+make fmt           # reformat all .nix files with nixfmt-rfc-style
+make commit        # git add -A && git commit
 make update-flake  # nix flake update (bumps all inputs)
+
+nix develop        # dev shell with nixfmt/statix/deadnix/nixd/sops/age
+nix fmt            # `formatter` output — same as make fmt
 ```
 
 Always run `make check` before `make switch`.
+
+---
+
+## Home Manager 25.11 API notes
+
+Recent renames encountered while porting modules — see
+`~/.claude/projects/-etc-nixos/memory/feedback_hm_25_11_renames.md`.
+
+Highlights:
+
+- `programs.git.{userName,userEmail,extraConfig,aliases}` → `programs.git.settings.*`
+- `programs.git.delta` → `programs.delta` (+ `enableGitIntegration = true`)
+- `programs.ssh.{controlMaster,…}` → `programs.ssh.matchBlocks."*".*` (+ `enableDefaultConfig = false`)
+- `virtualisation.libvirtd.qemu.ovmf` removed — OVMF is bundled by default now
+- `python3Full` removed → use `python3`
 
 ---
 
@@ -96,11 +116,60 @@ System rebuild (`make switch`) still needs `sudo`.
 
 ---
 
-## NAS post-setup (one-time)
+## First-time / post-refactor manual steps
 
-After the first `make switch` that enables Samba:
+Run these ONCE after enabling the new modules:
+
 ```bash
+# Samba (NAS)
 sudo smbpasswd -a main
+
+# Nextcloud admin password (before first switch)
+echo -n "<StrongPassword>" | sudo tee /etc/nextcloud-admin-pass
+sudo chmod 600 /etc/nextcloud-admin-pass
+
+# Grafana admin password (before first switch)
+echo -n "<StrongPassword>" | sudo tee /etc/grafana-admin-pass
+sudo chmod 600 /etc/grafana-admin-pass
+
+# Tailscale — first login + advertise role
+sudo tailscale up --advertise-exit-node --accept-routes --accept-dns=false
+
+# Metasploit — initialise its PostgreSQL DB
+sudo msfdb init
+
+# libvirt default network (VMs won't get IPs otherwise)
+sudo virsh net-start default && sudo virsh net-autostart default
+
+# sops-nix — derive host age key from SSH host key + create secrets.yaml
+sudo mkdir -p /var/lib/sops-nix
+sudo ssh-to-age -private-key -i /etc/ssh/ssh_host_ed25519_key \
+  | sudo tee /var/lib/sops-nix/host.age >/dev/null
+mkdir -p secrets && sops secrets/secrets.yaml
+# then uncomment `defaultSopsFile` in modules/system/secrets.nix
+
+# restic — legacy password files until sops migration
+sudo install -m 400 -o root -g root /dev/stdin /etc/restic/repo-password <<< "<repo-pw>"
+sudo install -m 400 -o root -g root /dev/stdin /etc/restic/env <<'EOF'
+B2_ACCOUNT_ID=<id>
+B2_ACCOUNT_KEY=<key>
+EOF
+
+# ntfy — admin user + bearer token for restic-verify / alerts publishers
+sudo ntfy user add --role=admin admin
+sudo ntfy access admin '*' rw
+sudo ntfy token add admin           # copy the printed token
+sudo install -m 400 -o root -g root /dev/stdin /etc/ntfy/token <<< "<token>"
+
+# Home Assistant — long-lived token for the Prometheus scrape job
+# (HA UI → Profile → Long-Lived Access Tokens)
+printf %s "<ha-token>" | sudo install -m 400 \
+  -o prometheus -g prometheus /dev/stdin /etc/prometheus/ha-token
+
+# Vikunja — JWT signing key (must NOT live in the Nix store)
+sudo install -d -m 0700 -o vikunja -g vikunja /etc/vikunja
+printf 'VIKUNJA_SERVICE_JWTSECRET=%s\n' "$(openssl rand -hex 32)" \
+  | sudo install -m 0400 -o vikunja -g vikunja /dev/stdin /etc/vikunja/env
 ```
 
 ---
@@ -109,7 +178,9 @@ sudo smbpasswd -a main
 
 Home Manager will fail if `~/.config/nvim/` already contains plain files.
 Back it up first:
+
 ```bash
 mv ~/.config/nvim ~/.config/nvim.bak
 ```
+
 Then run `make switch`, open Neovim, and run `:Lazy sync`.

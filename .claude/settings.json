@@ -1,0 +1,178 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git branch:*)",
+      "Bash(git show:*)",
+      "Bash(git blame:*)",
+      "Bash(git remote:*)",
+      "Bash(git ls-files:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git add:*)",
+      "Bash(git stash:*)",
+
+      "Bash(ls:*)",
+      "Bash(pwd)",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(wc:*)",
+      "Bash(sort:*)",
+      "Bash(uniq:*)",
+      "Bash(cut:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(find:*)",
+      "Bash(fd:*)",
+      "Bash(tree:*)",
+      "Bash(stat:*)",
+      "Bash(file:*)",
+
+      "Bash(make check)",
+      "Bash(make eval)",
+      "Bash(make lint)",
+      "Bash(make dead)",
+      "Bash(make fmt)",
+      "Bash(make fmt-check)",
+      "Bash(make dry)",
+      "Bash(make help)",
+
+      "Bash(nix eval:*)",
+      "Bash(nix flake check:*)",
+      "Bash(nix flake show:*)",
+      "Bash(nix flake metadata:*)",
+      "Bash(nix flake lock:*)",
+      "Bash(nix fmt:*)",
+      "Bash(nix run nixpkgs#nixfmt-rfc-style:*)",
+      "Bash(nix run nixpkgs#statix:*)",
+      "Bash(nix run nixpkgs#deadnix:*)",
+      "Bash(nix run nixpkgs#nixd:*)",
+      "Bash(nix run nixpkgs#nil:*)",
+      "Bash(nix store gc:*)",
+      "Bash(nix path-info:*)",
+      "Bash(nix why-depends:*)",
+      "Bash(nix search:*)",
+
+      "Bash(systemctl status:*)",
+      "Bash(systemctl list-units:*)",
+      "Bash(systemctl cat:*)",
+      "Bash(systemctl show:*)",
+      "Bash(systemctl is-active:*)",
+      "Bash(systemctl is-enabled:*)",
+      "Bash(journalctl:*)",
+
+      "Bash(ss:*)",
+      "Bash(ip addr:*)",
+      "Bash(ip -c:*)",
+      "Bash(ip route:*)",
+      "Bash(ping -c:*)",
+      "Bash(dig:*)",
+      "Bash(host:*)",
+      "Bash(nslookup:*)",
+      "Bash(curl -fsSL:*)",
+      "Bash(curl -sI:*)",
+
+      "Bash(nmap -sV -Pn:*)",
+      "Bash(nmap -sT -Pn:*)",
+      "Bash(nmap --top-ports:*)",
+
+      "Read(//etc/nixos/**)",
+      "Read(//home/main/.config/**)",
+      "Read(//var/log/**)"
+    ],
+    "ask": [
+      "Bash(sudo:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(git rebase:*)",
+      "Bash(git reset:*)",
+      "Bash(git checkout:*)",
+      "Bash(git switch:*)",
+      "Bash(git merge:*)",
+      "Bash(nix profile:*)",
+      "Bash(nix build:*)",
+      "Bash(nix develop:*)",
+      "Bash(nixos-rebuild:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh issue create:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf /:*)",
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf ~/:*)",
+      "Bash(rm -rf ~/*)",
+      "Bash(rm -rf /etc:*)",
+      "Bash(rm -rf /home:*)",
+      "Bash(rm -rf /nix:*)",
+      "Bash(rm -rf /var:*)",
+      "Bash(rm -rf /boot:*)",
+      "Bash(rm -rf /srv:*)",
+      "Bash(dd if=:*)",
+      "Bash(mkfs:*)",
+      "Bash(wipefs:*)",
+      "Bash(shred:*)",
+      "Bash(:(){ :|:& };:)",
+      "Bash(chmod -R 777 /:*)",
+      "Bash(chown -R:*)",
+      "Bash(curl:*|sh)",
+      "Bash(curl:*|bash)",
+      "Bash(wget:*|sh)",
+      "Bash(wget:*|bash)",
+
+      "Read(//etc/shadow)",
+      "Read(//etc/nextcloud-admin-pass)",
+      "Read(//etc/grafana-admin-pass)",
+      "Read(//etc/restic/**)",
+      "Read(//etc/wireguard/**)",
+      "Read(//var/lib/sops-nix/**)",
+      "Read(//home/main/.ssh/id_*)",
+      "Read(//home/main/.config/sops/age/keys.txt)",
+      "Read(//home/main/.gnupg/**)",
+
+      "Edit(//etc/shadow)",
+      "Edit(//etc/passwd)",
+      "Edit(//etc/nixos/hardware-configuration.nix)",
+      "Edit(//etc/wireguard/**)",
+      "Edit(//var/lib/sops-nix/**)"
+    ]
+  },
+
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ \"${CLAUDE_TOOL_FILE_PATH##*.}\" = \"nix\" ]; then nix run --quiet nixpkgs#nixfmt-rfc-style -- \"$CLAUDE_TOOL_FILE_PATH\" 2>/dev/null || true; fi"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "case \"$CLAUDE_TOOL_INPUT\" in *'nixos-rebuild switch'*|*'make switch'*) echo 'Running make check first…' >&2; cd /etc/nixos && make check >/dev/null 2>&1 || { echo 'make check failed — refusing switch' >&2; exit 2; };; esac"
+          }
+        ]
+      }
+    ]
+  },
+
+  "env": {
+    "NIXPKGS_ALLOW_UNFREE": "1"
+  },
+
+  "statusLine": {
+    "type": "command",
+    "command": "printf '\\033[36m%s\\033[0m | \\033[33m%s\\033[0m | \\033[32m%s\\033[0m' \"$(basename \"$PWD\")\" \"$(git -C \"$PWD\" rev-parse --abbrev-ref HEAD 2>/dev/null || echo -)\" \"$(git -C \"$PWD\" status --porcelain 2>/dev/null | wc -l | awk '{print $1\" changes\"}')\""
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json.schemastore.org/mcp.json",
+  "mcpServers": {
+    "filesystem": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/etc/nixos"]
+    },
+    "git": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["mcp-server-git", "--repository", "/etc/nixos"]
+    },
+
+    "ollama": {
+      "type": "http",
+      "url": "http://127.0.0.1:11434/v1",
+      "description": "Local Ollama LLM inference (OpenAI-compat). Use to run qwen2.5:14b, qwen2.5-coder:14b, deepseek-r1:14b, llama3.2:3b, llava:13b for text/vision/embeddings."
+    },
+
+    "ntfy": {
+      "type": "stdio",
+      "command": "sh",
+      "args": [
+        "-c",
+        "npx -y @modelcontextprotocol/server-http --base-url http://127.0.0.1:2586"
+      ],
+      "description": "Push notifications to the operator's phone via local ntfy. Topics: system, security, backup, news, finance, personal."
+    },
+
+    "home-assistant": {
+      "type": "http",
+      "url": "http://127.0.0.1:8123/api",
+      "description": "Home Assistant REST API — read sensors, fire scripts, list entities. Needs a long-lived access token; put it in ~/.config/claude/ha-token."
+    },
+
+    "immich": {
+      "type": "http",
+      "url": "http://127.0.0.1:2283/api",
+      "description": "Immich photo library — semantic search across photos by description, browse people/places/dates. Needs API key from Immich UI → Account Settings → API Keys."
+    },
+
+    "qdrant": {
+      "type": "http",
+      "url": "http://127.0.0.1:6333",
+      "description": "Qdrant vector store — semantic search across paperless, karakeep, memos collections indexed by agent-rag-indexer."
+    },
+
+    "vikunja": {
+      "type": "http",
+      "url": "http://127.0.0.1:3456/api/v1",
+      "description": "Vikunja tasks + projects — list/create/update tasks, projects, labels, filters. Needs API token from Vikunja UI → Settings → API Tokens."
+    },
+
+    "miniflux": {
+      "type": "http",
+      "url": "http://127.0.0.1:8081/v1",
+      "description": "Miniflux RSS reader — feeds, categories, unread/starred entries. Needs API key from Miniflux UI → Settings → API Keys."
+    },
+
+    "paperless": {
+      "type": "http",
+      "url": "http://127.0.0.1:28981/api",
+      "description": "Paperless-ngx document archive — search OCR'd docs, download PDFs, tag/correspondent management. Needs API token from Paperless UI."
+    },
+
+    "karakeep": {
+      "type": "http",
+      "url": "http://127.0.0.1:3005/api/v1",
+      "description": "Karakeep bookmarks + read-later + notes with tags. Needs API token from Karakeep UI → Settings."
+    }
+  }
+}

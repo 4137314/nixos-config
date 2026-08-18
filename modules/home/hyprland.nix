@@ -3,39 +3,38 @@
 
   Native configuration
   --------------------
-  The compositor is configured via the native hyprland.conf file at the
-  repository root. Nix does not generate or overwrite this file; it is
-  loaded verbatim via `builtins.readFile`.
+  The compositor is configured via the native `hyprland/hyprland.conf`
+  file co-located with this module. Nix does not generate or overwrite
+  it; it is loaded verbatim via `builtins.readFile` and streamed into
+  Home Manager as `extraConfig`.
 
   Plugin: hyprexpo
   ----------------
-  hyprexpo provides an Exposé-style overview of all workspaces.
-  Because the plugin .so path lives in the Nix store (not a predictable
-  system path), this module injects $HYPREXPO_PATH before the native
-  config so that the HYPR_PLUGIN_PATH line in hyprland.conf can reference
-  it with `$HYPREXPO_PATH` instead of a hard-coded store path.
+  hyprexpo provides an Exposé-style overview of all workspaces. Because
+  the plugin `.so` lives in the Nix store (unpredictable path), this
+  module prepends a `$HYPREXPO_PATH` variable so `hyprland.conf` can
+  reference the plugin symbolically instead of hard-coding a store path.
 
   settings = {}
   -------------
-  Prevents Home Manager from generating a duplicate hyprland.conf that
-  would conflict with the one injected via extraConfig.
+  Empty on purpose — otherwise Home Manager would generate a second
+  hyprland.conf and the two would fight for precedence.
 */
 { pkgs, ... }:
+let
+  inherit (pkgs.hyprlandPlugins) hyprexpo;
+  nativeConfig = builtins.readFile ./hyprland/hyprland.conf;
+in
 {
   wayland.windowManager.hyprland = {
-    enable  = true;
+    enable = true;
     package = pkgs.hyprland;
-
-    plugins = [
-      pkgs.hyprlandPlugins.hyprexpo
-    ];
-
+    plugins = [ hyprexpo ];
     settings = { };
-
     extraConfig = ''
-      $HYPREXPO_PATH = ${pkgs.hyprlandPlugins.hyprexpo}/lib/libhyprexpo.so
+      $HYPREXPO_PATH = ${hyprexpo}/lib/libhyprexpo.so
 
-      ${builtins.readFile ../../hyprland.conf}
+      ${nativeConfig}
     '';
   };
 }

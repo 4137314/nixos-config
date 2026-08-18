@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security advisory
+    url: https://github.com/4137314/nixos-hacker-box/security/advisories/new
+    about: Report a vulnerability privately — do not open a public issue.
+  - name: Discussion / question
+    url: https://github.com/4137314/nixos-hacker-box/discussions
+    about: General questions, ideas, or "how do I …?" — please post here first.

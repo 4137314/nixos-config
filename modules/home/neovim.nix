@@ -40,8 +40,8 @@
 { pkgs, unstable, ... }:
 {
   programs.neovim = {
-    enable        = true;
-    package       = unstable.neovim-unwrapped;
+    enable = true;
+    package = unstable.neovim-unwrapped;
     defaultEditor = true;
 
     extraPackages = with pkgs; [
@@ -53,14 +53,15 @@
   };
 
   xdg.configFile = {
-    "nvim/init.lua".source                         = ./nvim/init.lua;
-    "nvim/lua/core/options.lua".source             = ./nvim/lua/core/options.lua;
-    "nvim/lua/core/keymaps.lua".source             = ./nvim/lua/core/keymaps.lua;
-    "nvim/lua/core/autocmds.lua".source            = ./nvim/lua/core/autocmds.lua;
-    "nvim/lua/plugins.lua".source                  = ./nvim/lua/plugins.lua;
-    "nvim/lua/plugins/tools/telescope.lua".source  = ./nvim/lua/plugins/tools/telescope.lua;
+    "nvim/init.lua".source = ./nvim/init.lua;
+    "nvim/lua/core/options.lua".source = ./nvim/lua/core/options.lua;
+    "nvim/lua/core/keymaps.lua".source = ./nvim/lua/core/keymaps.lua;
+    "nvim/lua/core/autocmds.lua".source = ./nvim/lua/core/autocmds.lua;
+    "nvim/lua/plugins.lua".source = ./nvim/lua/plugins.lua;
+    "nvim/lua/plugins/tools/telescope.lua".source = ./nvim/lua/plugins/tools/telescope.lua;
     "nvim/lua/plugins/tools/treesitter.lua".source = ./nvim/lua/plugins/tools/treesitter.lua;
-    "nvim/lua/plugins/ui/toogle.lua".source        = ./nvim/lua/plugins/ui/toogle.lua;
-    "nvim/lua/plugins/ui/tree.lua".source          = ./nvim/lua/plugins/ui/tree.lua;
+    "nvim/lua/plugins/tools/avante.lua".source = ./nvim/lua/plugins/tools/avante.lua;
+    "nvim/lua/plugins/ui/toogle.lua".source = ./nvim/lua/plugins/ui/toogle.lua;
+    "nvim/lua/plugins/ui/tree.lua".source = ./nvim/lua/plugins/ui/tree.lua;
   };
 }

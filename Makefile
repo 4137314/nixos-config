@@ -3,7 +3,7 @@ HOST   := nixos-hacker-box
 # The # character starts a Make comment, so we use a shell trick to embed it.
 TARGET := .$(shell echo '\#')nixosConfigurations.$(HOST)
 
-NIX_FILES := $(FLAKE)/flake.nix $(FLAKE)/configuration.nix $(FLAKE)/home.nix \
+NIX_FILES := $(FLAKE)/flake.nix $(FLAKE)/configuration.nix \
              $(shell find $(FLAKE)/modules -name '*.nix' 2>/dev/null)
 
 .PHONY: help switch dry check eval lint dead fmt fmt-check git-add commit update-flake

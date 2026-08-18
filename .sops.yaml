@@ -1,0 +1,28 @@
+# sops policy — which recipients can decrypt which files.
+#
+# Bootstrap
+# ---------
+#   1. age-keygen -o ~/.config/sops/age/keys.txt
+#   2. age-keygen -y ~/.config/sops/age/keys.txt   # print public key
+#   3. Paste public key below under `keys:` → `user_main`.
+#   4. Derive the host key:
+#        sudo mkdir -p /var/lib/sops-nix
+#        sudo ssh-to-age -private-key -i /etc/ssh/ssh_host_ed25519_key \
+#          | sudo tee /var/lib/sops-nix/host.age >/dev/null
+#      then get the matching public key:
+#        sudo ssh-to-age < /etc/ssh/ssh_host_ed25519_key.pub
+#      Paste that below under `keys:` → `host_hackerbox`.
+#   5. sops secrets/secrets.yaml   # first edit creates the encrypted file.
+#
+# Update the placeholders below once you have both keys.
+
+keys:
+  - &user_main age1REPLACE_WITH_OPERATOR_PUBLIC_KEY
+  - &host_hackerbox age1REPLACE_WITH_HOST_PUBLIC_KEY
+
+creation_rules:
+  - path_regex: secrets/secrets\.yaml$
+    key_groups:
+      - age:
+          - *user_main
+          - *host_hackerbox

@@ -1,0 +1,16 @@
+# CODEOWNERS — auto-assign reviewers on PR.
+# Syntax: <path pattern>  <owner1> <owner2> ...
+# Sole operator on this repo — every path routes to @4137314.
+
+*                                @4137314
+
+# Explicit ownership for high-risk areas so any future collaborator can see
+# where the extra care goes.
+/modules/system/openssh.nix      @4137314
+/modules/system/hardening.nix    @4137314
+/modules/system/fail2ban.nix     @4137314
+/modules/system/secrets.nix      @4137314
+/modules/security/**             @4137314
+/modules/backup/**               @4137314
+/secrets/**                      @4137314
+/.github/workflows/**            @4137314

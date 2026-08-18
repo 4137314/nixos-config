@@ -12,8 +12,6 @@ NixOS flake configuration for a high-efficiency workstation + local NAS.
 /etc/nixos/
 ├── flake.nix                   Flake entry point
 ├── configuration.nix           System configuration (boot, network, users, storage)
-├── home.nix                    Home Manager entry point for user "main"
-├── hyprland.conf               Native Hyprland config (not managed by Nix)
 ├── hardware-configuration.nix  Auto-generated — do not edit
 │
 └── modules/
@@ -39,17 +37,17 @@ NixOS flake configuration for a high-efficiency workstation + local NAS.
 
 ## Quick reference
 
-| Alias / command | Description |
-|-----------------|-------------|
+| Alias / command | Description                            |
+| --------------- | -------------------------------------- |
 | `update`        | `nixos-rebuild switch` with this flake |
-| `update-dry`    | Dry-run: show what would change |
-| `conf`          | Edit `configuration.nix` in Neovim |
-| `v`             | Neovim |
-| `archive`       | `cd /mnt/archive` |
-| `nas-status`    | Status of smbd and syncthing |
-| `nas-shares`    | Active Samba connections |
-| `red-alert`     | Set all RGB LEDs to solid red |
-| `rgb-off`       | Turn off all RGB LEDs |
+| `update-dry`    | Dry-run: show what would change        |
+| `conf`          | Edit `configuration.nix` in Neovim     |
+| `v`             | Neovim                                 |
+| `archive`       | `cd /mnt/archive`                      |
+| `nas-status`    | Status of smbd and syncthing           |
+| `nas-shares`    | Active Samba connections               |
+| `red-alert`     | Set all RGB LEDs to solid red          |
+| `rgb-off`       | Turn off all RGB LEDs                  |
 
 ---
 
@@ -74,6 +72,7 @@ Run `make check` before every `make switch`.
 The `/mnt/archive` disk is shared over SMB on the local network.
 
 **Initial setup (run once after `make switch`):**
+
 ```bash
 sudo smbpasswd -a main
 ```
@@ -99,12 +98,14 @@ Configure folders and peer devices through the UI after the first switch.
 ## Neovim
 
 Neovim is managed declaratively:
+
 - **Binary:** sourced from `nixpkgs-unstable`
 - **Config files:** stored in `modules/home/nvim/`, symlinked to `~/.config/nvim/`
 - **Plugins:** managed by lazy.nvim (downloads at runtime; `lazy-lock.json` is writable)
 - **LSP tools in PATH:** `lua-language-server`, `stylua`, `ripgrep`, `fd`
 
 **First switch with Neovim managed by Nix:**
+
 ```bash
 mv ~/.config/nvim ~/.config/nvim.bak   # back up existing config
 make switch
@@ -140,19 +141,19 @@ The shell activates the project's Nix environment automatically on `cd`.
 
 Every push to `master` triggers two parallel GitHub Actions jobs:
 
-| Job | Steps |
-|-----|-------|
+| Job      | Steps                                                     |
+| -------- | --------------------------------------------------------- |
 | **eval** | `nix flake check --no-build` → evaluate full NixOS config |
-| **lint** | `statix` → `deadnix` |
+| **lint** | `statix` → `deadnix`                                      |
 
 ---
 
 ## Channels
 
-| Input | Channel |
-|-------|---------|
-| `nixpkgs` | `nixos-25.11` (stable) |
+| Input              | Channel                        |
+| ------------------ | ------------------------------ |
+| `nixpkgs`          | `nixos-25.11` (stable)         |
 | `nixpkgs-unstable` | `nixos-unstable` (Neovim only) |
-| `home-manager` | `release-25.11` |
+| `home-manager`     | `release-25.11`                |
 
 Update all inputs: `make update-flake`

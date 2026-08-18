@@ -1,0 +1,42 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    ":timezone(Europe/Rome)"
+  ],
+  "schedule": ["every weekend"],
+  "labels": ["deps", "automated"],
+  "prConcurrentLimit": 3,
+  "prHourlyLimit": 2,
+  "rangeStrategy": "bump",
+
+  "nix": { "enabled": true },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on saturday"],
+    "commitMessageAction": "bump",
+    "commitMessageTopic": "flake.lock"
+  },
+
+  "packageRules": [
+    {
+      "description": "Group all nixpkgs channel updates in one PR.",
+      "matchDatasources": ["github-tags"],
+      "matchPackagePatterns": ["^nixpkgs"],
+      "groupName": "nixpkgs channels"
+    },
+    {
+      "description": "Group Home Manager alongside nixpkgs to keep versions in sync.",
+      "matchDatasources": ["github-tags"],
+      "matchPackageNames": ["nix-community/home-manager"],
+      "groupName": "nixpkgs channels"
+    },
+    {
+      "description": "Auto-merge patch bumps only.",
+      "matchUpdateTypes": ["patch"],
+      "automerge": true,
+      "automergeType": "branch"
+    }
+  ]
+}

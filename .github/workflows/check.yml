@@ -2,9 +2,9 @@ name: NixOS Config Check
 
 on:
   push:
-    branches: [ master, main ]
+    branches: [master, main]
   pull_request:
-    branches: [ master, main ]
+    branches: [master, main]
 
 # Cancel in-progress runs on the same branch when a new push arrives.
 concurrency:
@@ -28,6 +28,12 @@ jobs:
           extra_nix_config: |
             experimental-features = nix-command flakes
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+            substituters = https://cache.nixos.org https://nix-community.cachix.org
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=
+
+      # Warms the Nix store across runs — big win for repeat CI on this flake.
+      - name: Enable magic Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
 
       - name: nix flake check (structure)
         run: nix flake check --no-build
@@ -40,7 +46,7 @@ jobs:
             --json > /dev/null
 
   # ────────────────────────────────────────────────────────────────────────────
-  # Job 2: Lint (runs in parallel with eval)
+  # Job 2: Lint (statix + deadnix, in parallel with eval)
   # ────────────────────────────────────────────────────────────────────────────
   lint:
     name: Lint
@@ -56,6 +62,9 @@ jobs:
             experimental-features = nix-command flakes
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
+      - name: Enable magic Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
       - name: statix (Nix anti-pattern linter)
         run: |
           nix run nixpkgs#statix -- check \
@@ -67,3 +76,29 @@ jobs:
             --fail \
             --exclude ./hardware-configuration.nix \
             .
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Job 3: Formatting (nixfmt-rfc-style, in parallel with everything else)
+  # ────────────────────────────────────────────────────────────────────────────
+  fmt:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Enable magic Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - name: nixfmt --check
+        run: |
+          nix run nixpkgs#nixfmt-rfc-style -- --check \
+            flake.nix configuration.nix \
+            $(find modules -name '*.nix')

@@ -1,0 +1,77 @@
+system:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "modules/system/**"
+
+hardware:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "modules/hardware/**"
+
+security:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "modules/security/**"
+          - "modules/system/openssh.nix"
+          - "modules/system/hardening.nix"
+          - "modules/system/fail2ban.nix"
+          - "modules/system/secrets.nix"
+
+network:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "modules/network/**"
+
+nas:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "modules/nas/**"
+
+cloud:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "modules/cloud/**"
+
+media:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "modules/media/**"
+
+hub:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "modules/hub/**"
+
+monitoring:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "modules/monitoring/**"
+
+backup:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "modules/backup/**"
+
+home-manager:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "modules/home/**"
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/**"
+          - "Makefile"
+
+docs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.md"
+          - "README.md"
+          - "CLAUDE.md"
+
+claude-config:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".claude/**"
+          - ".mcp.json"

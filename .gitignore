@@ -1,0 +1,24 @@
+# Claude Code — user-specific overrides (permissions, prompts) stay local.
+.claude/settings.local.json
+
+# sops-nix — plaintext scratch, never commit.
+secrets/*.plain
+secrets/*.dec.yaml
+!secrets/.gitkeep
+
+# Nix build outputs.
+result
+result-*
+
+# direnv cache.
+.direnv/
+
+# Editor scratch.
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# OS junk.
+.DS_Store
+Thumbs.db

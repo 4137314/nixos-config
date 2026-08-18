@@ -32,12 +32,11 @@
     pavucontrol
     helvum
 
-    # Browser & terminal
-    firefox
-    kitty
+    # Browser & terminal are installed via Home Manager
+    # (modules/home/firefox.nix, modules/home/kitty.nix).
+    # Waybar is also HM-managed (modules/home/waybar.nix).
 
     # Wayland / desktop
-    waybar
     hyprlock
     hypridle
     wofi
@@ -71,6 +70,10 @@
     # RGB
     openrgb
 
+    # Storage tools
+    btrfs-progs
+    smartmontools
+
     # Containers
     docker-compose
   ];
@@ -85,10 +88,10 @@
   ];
 
   virtualisation.docker = {
-    enable    = true;
+    enable = true;
     autoPrune = {
       enable = true;
-      dates  = "weekly";
+      dates = "weekly";
     };
   };
 }

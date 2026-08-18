@@ -1,0 +1,46 @@
+name: Feature / module request
+description: Add a service, harden an existing one, or extend the hub.
+labels: [enhancement]
+body:
+  - type: input
+    id: title
+    attributes:
+      label: Short name
+      description: One-line name for the feature.
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Why
+      description: What problem does this solve? Why now?
+    validations:
+      required: true
+
+  - type: textarea
+    id: sketch
+    attributes:
+      label: Design sketch
+      description: |
+        Which module(s) would this touch or create? What existing modules does
+        it compose with? Any secrets / migrations / bootstrap needed?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Off-the-shelf options rejected and why.
+
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Blast radius
+      options:
+        - Additive — new module, no changes to existing
+        - Refactor — restructures existing modules
+        - Breaking — changes on-disk state / API for other services
+    validations:
+      required: true

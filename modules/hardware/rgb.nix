@@ -14,10 +14,13 @@
   The udev rule grants the `i2c` group read/write access to all I2C devices,
   allowing OpenRGB to run without root privileges (user must be in group i2c).
 */
-_:
-{
-  boot.kernelParams  = [ "acpi_enforce_resources=lax" ];
-  boot.kernelModules = [ "i2c-dev" "i2c-piix4" "i2c-i801" ];
+_: {
+  boot.kernelParams = [ "acpi_enforce_resources=lax" ];
+  boot.kernelModules = [
+    "i2c-dev"
+    "i2c-piix4"
+    "i2c-i801"
+  ];
 
   services.hardware.openrgb.enable = true;
 

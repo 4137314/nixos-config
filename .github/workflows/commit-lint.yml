@@ -3,6 +3,18 @@ name: Commit Lint
 on:
   pull_request:
     branches: [master, main]
+    # Ensure the workflow re-runs on title edits (Conventional Commits
+    # violations are usually fixed by editing the PR title, not by
+    # pushing new commits).
+    types: [opened, edited, synchronize, reopened]
+
+# `amannn/action-semantic-pull-request@v5` needs read access to PR
+# metadata; the runner default with `default_workflow_permissions=read`
+# on a private repo only grants `contents: read`, so the action gets
+# `Resource not accessible by integration`. Declare the exact set.
+permissions:
+  pull-requests: read
+  contents: read
 
 jobs:
   conventional:

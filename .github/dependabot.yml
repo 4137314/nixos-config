@@ -11,8 +11,14 @@ updates:
       timezone: "Europe/Rome"
     labels:
       - "deps"
-      - "ci"
+      - "type:chore"
+      - "scope:ci"
+    # NB: with `include: scope`, dependabot appends `(deps)` to the
+    # prefix — so `prefix: chore(ci)` would produce the invalid
+    # `chore(ci)(deps): ...` (double scope, rejected by the Conventional
+    # Commits linter). Use a bare `chore` prefix and let dependabot
+    # supply the single `(deps)` scope itself.
     commit-message:
-      prefix: "chore(ci)"
+      prefix: "chore"
       include: "scope"
     open-pull-requests-limit: 3

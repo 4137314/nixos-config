@@ -1,29 +1,53 @@
 /*
-  agents/default.nix — Autonomous LLM pipelines.
+  agents/default.nix — Top-level aggregator for the autonomous agent suites.
 
-  Each agent is a self-contained NixOS systemd unit that periodically
-  wakes up, gathers data from local services, asks Ollama for
-  structured output, and publishes to ntfy.
+  Sub-suites (each importable independently)
+  ------------------------------------------
+    observatory/    Self-observation. Doctor, analyst, triage, diary,
+                    healer, janitor, indexer, brain, metrics, RAG, distill.
+                    Always safe to enable — pure read + hardened.
 
-    log-analyzer      hourly    Loki    → LLM → ntfy `system`
-    news-digest       daily     Miniflux → LLM → ntfy `news`
-    finance-brief     weekdays  Ghostfolio + Yahoo/CoinGecko → LLM → ntfy `finance`
-    incident-analyst  on-demand systemd + journal → LLM → ntfy `system`
+    ops/            Infra/ops LLM pipelines (log-analyzer, news-digest,
+                    finance-brief, incident-analyst). Needs external
+                    tokens (see prerequisites below).
 
-  All agents run under dedicated system users `agent-<name>` with a
-  hardened systemd sandbox. State lives in /var/lib/agents/<name>/.
-  Secrets (Miniflux token, Ghostfolio token, ntfy bearer token) are
-  read from files under /var/lib/agents/ owned by root, mode 400, and
-  bind-mounted read-only into each agent via NixOS's default systemd
-  isolation.
+    personal/       Life-facing LLM pipelines (weekly-reflection, doc
+                    classifier, bookmark summariser, calendar briefer,
+                    health nudger). Needs Nextcloud / Karakeep / HA up.
 
-  Wiring the tokens (once)
-  ------------------------
-      # ntfy bearer for cross-agent authenticated push
+    knowledge/      Cross-service RAG indexer over user data (Notes,
+                    bookmarks, Memos, Silverbullet, personal repos).
+
+  Enabling individual suites
+  --------------------------
+  Import ONLY what you need in configuration.nix, e.g.:
+      ./modules/agents/observatory
+      ./modules/agents/ops
+      # ./modules/agents/personal   # add once Nextcloud is running
+      # ./modules/agents/knowledge  # add once Karakeep is running
+
+  Or import this whole file (`./modules/agents`) to pull everything at
+  once — the default here is CONSERVATIVE: only `observatory` is
+  imported so a fresh install can't fail on missing tokens.
+
+  Shared plumbing
+  ---------------
+  Every topical agent in ops/, personal/, knowledge/ is built via
+  `mkAgent` from `agents/lib.nix`, which:
+    * runs the pipeline under a dedicated `agent-<name>` system user,
+    * grants that user membership in `obs-bus` so it can publish
+      `run_start` / `run_completed` / `run_failed` events on the
+      observatory event bus (see `observatory/lib.nix` for the schema),
+    * exposes OLLAMA_URL, NTFY_URL, LOKI_URL, STATE_DIR, HOSTNAME to
+      the pipeline body.
+
+  Wiring the tokens (once, before enabling ops/ or personal/)
+  ------------------------------------------------------------
+      # ntfy bearer for authenticated push from every agent
       echo -n "tk_..." | sudo tee /var/lib/agents/ntfy-token >/dev/null
       sudo chmod 400 /var/lib/agents/ntfy-token
 
-      # Miniflux API key (from Miniflux UI → Settings → API Keys)
+      # Miniflux API key (Miniflux UI → Settings → API Keys)
       echo -n "1|abc..." | sudo tee /var/lib/agents/miniflux-token >/dev/null
       sudo chmod 400 /var/lib/agents/miniflux-token
 
@@ -31,31 +55,21 @@
       echo -n "eyJ..." | sudo tee /var/lib/agents/ghostfolio-token >/dev/null
       sudo chmod 400 /var/lib/agents/ghostfolio-token
 
-  Manual dry-run of any agent (as root):
+  Manual dry-run of any agent:
       sudo systemctl start agent-<name>
       sudo journalctl -fu agent-<name>
 */
 _: {
   imports = [
-    # Infrastructure / operations agents
-    ./log-analyzer.nix
-    ./news-digest.nix
-    ./finance-brief.nix
-    ./incident-analyst.nix
-
-    # Personal / life agents
-    ./weekly-reflection.nix
-    ./document-classifier.nix
-    ./bookmark-summariser.nix
-    ./calendar-briefer.nix
-    ./health-nudger.nix
-
-    # Cross-service RAG indexer
-    ./rag-indexer.nix
+    ./observatory
+    # Uncomment as prerequisites are met:
+    # ./ops
+    # ./personal
+    # ./knowledge
   ];
 
-  # State root — the individual mkAgent invocations create per-agent
-  # subdirs. The parent is 0755 root:root so agents can traverse it.
+  # State root for topical agents. Individual `mkAgent` invocations create
+  # per-agent 0750 subdirs. Parent is 0755 so agents can traverse it.
   systemd.tmpfiles.rules = [
     "d /var/lib/agents 0755 root root -"
   ];

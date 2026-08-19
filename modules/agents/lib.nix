@@ -1,23 +1,34 @@
 /*
   agents/lib.nix — Reusable builder for autonomous LLM pipelines.
 
-  This file is a plain Nix helper (NOT a NixOS module). Import it from
-  agent modules like:
+  Not a NixOS module — a plain Nix helper. Consume from an agent file:
 
     { pkgs, lib, ... }:
-    let mkAgent = (import ./lib.nix { inherit pkgs lib; }).mkAgent;
+    let mkAgent = (import ../lib.nix { inherit pkgs lib; }).mkAgent;
     in mkAgent { name = "…"; ... }
 
-  Returns a NixOS-module-shaped attrset with systemd service + timer +
-  system user pre-configured. Every agent gets:
-    - dedicated unprivileged user `agent-<name>`
-    - state directory /var/lib/agents/<name> (0750, RW only for its user)
-    - sandboxed systemd unit (ProtectSystem=strict, PrivateTmp, …)
-    - env vars: OLLAMA_URL, NTFY_URL, LOKI_URL, STATE_DIR, HOSTNAME
-    - PATH pre-loaded with curl, jq, gawk, gnused
+  Every agent produced by `mkAgent` gets:
+    * a dedicated unprivileged user `agent-<name>` (member of `obs-bus`
+      so it can publish to the observatory event bus),
+    * state directory /var/lib/agents/<name>/  (0750, RW only for its user),
+    * a sandboxed systemd unit (ProtectSystem=strict, PrivateTmp, …),
+    * env: OLLAMA_URL, NTFY_URL, LOKI_URL, STATE_DIR, HOSTNAME,
+    * PATH pre-loaded with curl, jq, gawk, gnused, and `obs-event`,
+    * **auto-emission of lifecycle events** on the observatory bus:
+        run_start        at the top of the script (correlation_id captured)
+        run_completed    on clean exit  (rc == 0)
+        run_failed       on non-zero exit (payload includes exit_code)
+
+  The correlation_id is `agent-<name>-<epoch_ns>` and is preserved for
+  the whole run, so `obs-event chain <id>` walks the workflow (and
+  brains / metrics can group per-run).
 */
 { pkgs, lib }:
 let
+  # Pull `obs-event` from the observatory lib so ALL agents publish to
+  # the same JSONL bus with the same schema.
+  inherit (import ./observatory/lib.nix { inherit pkgs; }) obs-event;
+
   agentUser = name: "agent-${name}";
 
   mkAgent =
@@ -43,10 +54,11 @@ let
             coreutils
             gawk
             gnused
+            obs-event
           ]
           ++ extraPackages;
         text = ''
-          set -euo pipefail
+          set -uo pipefail
           umask 077
 
           export STATE_DIR="/var/lib/agents/${name}"
@@ -62,8 +74,31 @@ let
             export NTFY_TOKEN
           fi
 
+          # ── Observatory bus integration ─────────────────────────────
+          # Per-run correlation id so downstream agents (or `obs-event
+          # chain`) can walk the whole workflow later.
+          __CORR="agent-${name}-$(date +%s%N)"
+          export OBS_CORRELATION_ID="$__CORR"
+
+          __emit_exit() {
+            local rc=$?
+            if [ "$rc" -eq 0 ]; then
+              obs-event publish "agent-${name}" run_completed '{}' \
+                --correlation="$__CORR" >/dev/null 2>&1 || true
+            else
+              obs-event publish "agent-${name}" run_failed \
+                "$(jq -cn --argjson c "$rc" '{exit_code:$c}')" \
+                --correlation="$__CORR" >/dev/null 2>&1 || true
+            fi
+          }
+          trap __emit_exit EXIT
+
+          obs-event publish "agent-${name}" run_start '{}' \
+            --correlation="$__CORR" >/dev/null 2>&1 || true
+
           echo "agent[${name}] starting at $(date -Iseconds)"
 
+          # ── User-supplied pipeline body ─────────────────────────────
           ${script}
 
           echo "agent[${name}] done at $(date -Iseconds)"
@@ -75,6 +110,9 @@ let
         users.${user} = {
           isSystemUser = true;
           group = user;
+          # Membership of `obs-bus` grants write access to
+          # /var/lib/observatory/events.jsonl (see observatory/default.nix).
+          extraGroups = [ "obs-bus" ];
           home = "/var/lib/agents/${name}";
           createHome = false;
         };
@@ -101,7 +139,12 @@ let
               PrivateDevices = true;
               ProtectSystem = "strict";
               ProtectHome = true;
-              ReadWritePaths = [ "/var/lib/agents/${name}" ];
+              # Own state dir + observatory bus (append via `obs-event`).
+              ReadWritePaths = [
+                "/var/lib/agents/${name}"
+                "/var/lib/observatory/events.jsonl"
+                "/var/lib/observatory/events.jsonl.lock"
+              ];
               ProtectKernelTunables = true;
               ProtectKernelModules = true;
               ProtectControlGroups = true;

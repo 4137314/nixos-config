@@ -26,7 +26,7 @@
 */
 { pkgs, lib, ... }:
 let
-  agents = import ./lib.nix { inherit pkgs lib; };
+  agents = import ../lib.nix { inherit pkgs lib; };
 in
 agents.mkAgent {
   name = "health-nudger";

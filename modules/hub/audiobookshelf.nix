@@ -16,6 +16,20 @@
   ------
   http://127.0.0.1:8112 direct, https://audio.nixos-hacker-box behind Caddy.
 
+  On `dataDir`
+  ------------
+  The NixOS module in nixpkgs 25.11 has a bug: it prepends `/var/lib/` to
+  the `dataDir` value when building `WorkingDirectory`, so passing an
+  ABSOLUTE `dataDir` like `/var/lib/audiobookshelf` produces the broken
+  `WorkingDirectory=/var/lib/var/lib/audiobookshelf` and the service
+  crashes with `status=200/CHDIR`. We therefore DO NOT set `dataDir` and
+  let the module use its own default (which is the correct
+  `/var/lib/audiobookshelf`).
+
+  Also override `StateDirectory=` to a relative name — the upstream sets
+  the absolute form which systemd silently ignores, so the dir is never
+  auto-created without this fix.
+
   First-run
   ---------
   1. Create the media directories (only needs to happen once):
@@ -30,26 +44,13 @@
     enable = true;
     host = "127.0.0.1";
     port = 8112;
-
-    dataDir = "/var/lib/audiobookshelf";
+    # dataDir intentionally NOT set — see doc-comment above (upstream bug).
   };
 
   # Ensure the service account can read files owned by the media group.
   users.users.audiobookshelf.extraGroups = [ "media" ];
 
-  # The upstream module sets `WorkingDirectory=` to `dataDir` but does NOT
-  # create the directory, so systemd fails with `status=200/CHDIR` on
-  # first boot. Pre-create it as root — the audiobookshelf user may not
-  # yet exist when `systemd-tmpfiles-setup` first runs; the service itself
-  # is started with the correct uid and will chown its own subtree.
-  systemd.tmpfiles.rules = [
-    "d /var/lib/audiobookshelf 0755 root root -"
-  ];
-
-  # The upstream module sets `StateDirectory = "/var/lib/audiobookshelf"`
-  # (a full path). systemd rejects absolute paths for `StateDirectory=`
-  # and silently skips creating the directory — hence the `status=200/CHDIR`
-  # failure on first boot. Override with the correct RELATIVE form so
-  # systemd creates and chowns the directory before ExecStart.
+  # Force StateDirectory to a RELATIVE name so systemd auto-creates
+  # /var/lib/audiobookshelf with the right owner before ExecStart.
   systemd.services.audiobookshelf.serviceConfig.StateDirectory = lib.mkForce "audiobookshelf";
 }

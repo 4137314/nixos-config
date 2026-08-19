@@ -77,10 +77,9 @@
       openssl
       coreutils
     ];
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-    };
+    # No `RemainAfterExit = true` — see modules/hub/vikunja.nix for
+    # rationale (idempotent re-run on every vaultwarden.service restart).
+    serviceConfig.Type = "oneshot";
     script = ''
       set -euo pipefail
       install -d -m 0750 -o root -g root /var/lib/vaultwarden

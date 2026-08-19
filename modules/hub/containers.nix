@@ -76,12 +76,17 @@ in
     containers = {
       # -------------------------------------------------------------------
       # Glance — dashboard aggregator (RSS, weather, monitors, calendars).
+      # DISABLED — Glance refuses to start without a `glance.yml` config
+      # file at /var/lib/hub/glance/glance.yml. To re-enable:
+      #   1. Copy an example from https://github.com/glanceapp/glance
+      #      into /var/lib/hub/glance/glance.yml
+      #   2. Uncomment the block below.
       # -------------------------------------------------------------------
-      glance = simple {
-        image = "docker.io/glanceapp/glance:latest";
-        port = 8085;
-        dataDir = "/var/lib/hub/glance";
-      };
+      # glance = simple {
+      #   image = "docker.io/glanceapp/glance:latest";
+      #   port = 8085;
+      #   dataDir = "/var/lib/hub/glance";
+      # };
 
       # -------------------------------------------------------------------
       # changedetection.io — monitor web pages for changes.
@@ -100,19 +105,25 @@ in
 
       # -------------------------------------------------------------------
       # Karakeep — modern read-later + bookmarks + notes.
+      # DISABLED — requires /var/lib/hub/karakeep/env with:
+      #   NEXTAUTH_SECRET=<openssl rand -base64 36>
+      #   MEILI_ADDR=http://meilisearch:7700
+      #   MEILI_MASTER_KEY=<openssl rand -hex 32>
+      # See https://docs.karakeep.app for the full env schema. Once
+      # /var/lib/hub/karakeep/env is provisioned, uncomment below.
       # -------------------------------------------------------------------
-      karakeep = {
-        image = "ghcr.io/karakeep-app/karakeep:release";
-        autoStart = true;
-        ports = [ "127.0.0.1:3005:3000" ];
-        volumes = [ "/var/lib/hub/karakeep:/data" ];
-        environmentFiles = [ "/var/lib/hub/karakeep/env" ];
-        environment = {
-          NEXTAUTH_URL = "https://links.nixos-hacker-box";
-          DATA_DIR = "/data";
-        };
-        extraOptions = [ "--pull=missing" ];
-      };
+      # karakeep = {
+      #   image = "ghcr.io/karakeep-app/karakeep:release";
+      #   autoStart = true;
+      #   ports = [ "127.0.0.1:3005:3000" ];
+      #   volumes = [ "/var/lib/hub/karakeep:/data" ];
+      #   environmentFiles = [ "/var/lib/hub/karakeep/env" ];
+      #   environment = {
+      #     NEXTAUTH_URL = "https://links.nixos-hacker-box";
+      #     DATA_DIR = "/data";
+      #   };
+      #   extraOptions = [ "--pull=missing" ];
+      # };
 
       # -------------------------------------------------------------------
       # Memos — twitter-like personal micro-notes.
@@ -148,97 +159,101 @@ in
 
       # -------------------------------------------------------------------
       # Firefly III — personal finance (accounts, budgets, bills, rules).
+      # DISABLED — requires two provisioned env files. To re-enable:
+      #   sudo install -d -o root -g root -m 0700 /var/lib/hub/firefly
+      #   printf 'POSTGRES_PASSWORD=%s\n' "$(openssl rand -hex 24)" \
+      #     | sudo install -m 0400 /dev/stdin /var/lib/hub/firefly/db.env
+      #   {
+      #     echo "APP_KEY=$(openssl rand -base64 32)"
+      #     echo "DB_PASSWORD=$(sudo grep POSTGRES_PASSWORD /var/lib/hub/firefly/db.env | cut -d= -f2)"
+      #   } | sudo install -m 0400 /dev/stdin /var/lib/hub/firefly/app.env
+      # Then uncomment both blocks below.
       # -------------------------------------------------------------------
-      firefly-db = {
-        image = "docker.io/library/postgres:16-alpine";
-        autoStart = true;
-        environment = {
-          POSTGRES_USER = "firefly";
-          POSTGRES_DB = "firefly";
-        };
-        environmentFiles = [ "/var/lib/hub/firefly/db.env" ]; # POSTGRES_PASSWORD
-        volumes = [ "/var/lib/hub/firefly/db:/var/lib/postgresql/data" ];
-        extraOptions = [
-          "--pull=missing"
-          "--network=hub-firefly"
-        ];
-      };
-
-      firefly = {
-        image = "docker.io/fireflyiii/core:latest";
-        autoStart = true;
-        dependsOn = [ "firefly-db" ];
-        ports = [ "127.0.0.1:8083:8080" ];
-        volumes = [ "/var/lib/hub/firefly/upload:/var/www/html/storage/upload" ];
-        environmentFiles = [ "/var/lib/hub/firefly/app.env" ]; # APP_KEY, DB pass
-        environment = {
-          APP_URL = "https://money.nixos-hacker-box";
-          TZ = "Europe/Rome";
-          DB_CONNECTION = "pgsql";
-          DB_HOST = "firefly-db";
-          DB_PORT = "5432";
-          DB_DATABASE = "firefly";
-          DB_USERNAME = "firefly";
-          # Only the host loopback proxies to Firefly (Caddy runs on the
-          # host at 127.0.0.1). `**` would let any container on the same
-          # podman bridge spoof `X-Forwarded-For`.
-          TRUSTED_PROXIES = "127.0.0.1";
-        };
-        extraOptions = [
-          "--pull=missing"
-          "--network=hub-firefly"
-        ];
-      };
+      # firefly-db = {
+      #   image = "docker.io/library/postgres:16-alpine";
+      #   autoStart = true;
+      #   environment = {
+      #     POSTGRES_USER = "firefly";
+      #     POSTGRES_DB = "firefly";
+      #   };
+      #   environmentFiles = [ "/var/lib/hub/firefly/db.env" ];
+      #   volumes = [ "/var/lib/hub/firefly/db:/var/lib/postgresql/data" ];
+      #   extraOptions = [ "--pull=missing" "--network=hub-firefly" ];
+      # };
+      #
+      # firefly = {
+      #   image = "docker.io/fireflyiii/core:latest";
+      #   autoStart = true;
+      #   dependsOn = [ "firefly-db" ];
+      #   ports = [ "127.0.0.1:8083:8080" ];
+      #   volumes = [ "/var/lib/hub/firefly/upload:/var/www/html/storage/upload" ];
+      #   environmentFiles = [ "/var/lib/hub/firefly/app.env" ];
+      #   environment = {
+      #     APP_URL = "https://money.nixos-hacker-box";
+      #     TZ = "Europe/Rome";
+      #     DB_CONNECTION = "pgsql";
+      #     DB_HOST = "firefly-db";
+      #     DB_PORT = "5432";
+      #     DB_DATABASE = "firefly";
+      #     DB_USERNAME = "firefly";
+      #     TRUSTED_PROXIES = "127.0.0.1";
+      #   };
+      #   extraOptions = [ "--pull=missing" "--network=hub-firefly" ];
+      # };
 
       # -------------------------------------------------------------------
       # Ghostfolio — investment portfolio tracker (stocks, ETF, crypto).
+      # DISABLED — requires three provisioned env files. To re-enable:
+      #   sudo install -d -o root -g root -m 0700 /var/lib/hub/ghostfolio
+      #   PGPW=$(openssl rand -hex 24)
+      #   printf 'POSTGRES_PASSWORD=%s\n' "$PGPW" \
+      #     | sudo install -m 0400 /dev/stdin /var/lib/hub/ghostfolio/db.env
+      #   printf 'REDIS_PASSWORD=%s\n' "$(openssl rand -hex 24)" \
+      #     | sudo install -m 0400 /dev/stdin /var/lib/hub/ghostfolio/redis.env
+      #   {
+      #     echo "ACCESS_TOKEN_SALT=$(openssl rand -hex 32)"
+      #     echo "JWT_SECRET_KEY=$(openssl rand -hex 32)"
+      #     echo "DATABASE_URL=postgresql://ghostfolio:${PGPW}@ghostfolio-db:5432/ghostfolio"
+      #     echo "REDIS_HOST=ghostfolio-redis"
+      #     echo "REDIS_PORT=6379"
+      #     echo "REDIS_PASSWORD=$(grep REDIS_PASSWORD /var/lib/hub/ghostfolio/redis.env | cut -d= -f2)"
+      #   } | sudo install -m 0400 /dev/stdin /var/lib/hub/ghostfolio/app.env
+      # Then uncomment all three blocks below.
       # -------------------------------------------------------------------
-      ghostfolio-db = {
-        image = "docker.io/library/postgres:16-alpine";
-        autoStart = true;
-        environment = {
-          POSTGRES_USER = "ghostfolio";
-          POSTGRES_DB = "ghostfolio";
-        };
-        environmentFiles = [ "/var/lib/hub/ghostfolio/db.env" ];
-        volumes = [ "/var/lib/hub/ghostfolio/db:/var/lib/postgresql/data" ];
-        extraOptions = [
-          "--pull=missing"
-          "--network=hub-ghostfolio"
-        ];
-      };
-
-      ghostfolio-redis = {
-        image = "docker.io/library/redis:7-alpine";
-        autoStart = true;
-        environmentFiles = [ "/var/lib/hub/ghostfolio/redis.env" ];
-        extraOptions = [
-          "--pull=missing"
-          "--network=hub-ghostfolio"
-        ];
-      };
-
-      ghostfolio = {
-        image = "ghcr.io/ghostfolio/ghostfolio:latest";
-        autoStart = true;
-        dependsOn = [
-          "ghostfolio-db"
-          "ghostfolio-redis"
-        ];
-        ports = [ "127.0.0.1:3333:3333" ];
-        environmentFiles = [ "/var/lib/hub/ghostfolio/app.env" ];
-        environment = {
-          NODE_ENV = "production";
-          HOST = "0.0.0.0";
-          PORT = "3333";
-          DATABASE_URL = "postgresql://ghostfolio@ghostfolio-db:5432/ghostfolio";
-          REDIS_HOST = "ghostfolio-redis";
-        };
-        extraOptions = [
-          "--pull=missing"
-          "--network=hub-ghostfolio"
-        ];
-      };
+      # ghostfolio-db = {
+      #   image = "docker.io/library/postgres:16-alpine";
+      #   autoStart = true;
+      #   environment = {
+      #     POSTGRES_USER = "ghostfolio";
+      #     POSTGRES_DB = "ghostfolio";
+      #   };
+      #   environmentFiles = [ "/var/lib/hub/ghostfolio/db.env" ];
+      #   volumes = [ "/var/lib/hub/ghostfolio/db:/var/lib/postgresql/data" ];
+      #   extraOptions = [ "--pull=missing" "--network=hub-ghostfolio" ];
+      # };
+      #
+      # ghostfolio-redis = {
+      #   image = "docker.io/library/redis:7-alpine";
+      #   autoStart = true;
+      #   environmentFiles = [ "/var/lib/hub/ghostfolio/redis.env" ];
+      #   extraOptions = [ "--pull=missing" "--network=hub-ghostfolio" ];
+      # };
+      #
+      # ghostfolio = {
+      #   image = "ghcr.io/ghostfolio/ghostfolio:latest";
+      #   autoStart = true;
+      #   dependsOn = [ "ghostfolio-db" "ghostfolio-redis" ];
+      #   ports = [ "127.0.0.1:3333:3333" ];
+      #   environmentFiles = [ "/var/lib/hub/ghostfolio/app.env" ];
+      #   environment = {
+      #     NODE_ENV = "production";
+      #     HOST = "0.0.0.0";
+      #     PORT = "3333";
+      #     DATABASE_URL = "postgresql://ghostfolio@ghostfolio-db:5432/ghostfolio";
+      #     REDIS_HOST = "ghostfolio-redis";
+      #   };
+      #   extraOptions = [ "--pull=missing" "--network=hub-ghostfolio" ];
+      # };
 
       # -------------------------------------------------------------------
       # IT-Tools — a bundle of dev utilities (jwt decoder, hash, colours…)
@@ -277,90 +292,92 @@ in
       # Firecrawl — LLM-friendly web scraping (markdown + screenshot).
       # Feeds bookmark-summariser + rag-indexer + n8n workflows.
       # -------------------------------------------------------------------
-      firecrawl-redis = {
-        image = "docker.io/library/redis:7-alpine";
-        autoStart = true;
-        volumes = [ "/var/lib/hub/firecrawl/redis:/data" ];
-        extraOptions = [
-          "--pull=missing"
-          "--network=hub-firecrawl"
-        ];
-      };
-      firecrawl = {
-        image = "ghcr.io/mendableai/firecrawl:latest";
-        autoStart = true;
-        dependsOn = [ "firecrawl-redis" ];
-        ports = [ "127.0.0.1:3002:3002" ];
-        environment = {
-          NUM_WORKERS_PER_QUEUE = "8";
-          PORT = "3002";
-          HOST = "0.0.0.0";
-          REDIS_URL = "redis://firecrawl-redis:6379";
-          REDIS_RATE_LIMIT_URL = "redis://firecrawl-redis:6379";
-          # Playwright fallback — comment out to use only fetch-based scraper.
-          PLAYWRIGHT_MICROSERVICE_URL = "";
-          USE_DB_AUTHENTICATION = "false";
-          BULL_AUTH_KEY = "";
-          POSTHOG_API_KEY = "";
-        };
-        extraOptions = [
-          "--pull=missing"
-          "--network=hub-firecrawl"
-        ];
-      };
+      # DISABLED — firecrawl-app fails because
+      # ghcr.io/mendableai/firecrawl:latest does not exist. Upstream
+      # publishes multiple images (`firecrawl`, `firecrawl-playwright`,
+      # etc.) but not a plain `firecrawl:latest`. Confirm the correct
+      # tag on their GHCR page before re-enabling.
+      # -------------------------------------------------------------------
+      # firecrawl-redis = {
+      #   image = "docker.io/library/redis:7-alpine";
+      #   autoStart = true;
+      #   volumes = [ "/var/lib/hub/firecrawl/redis:/data" ];
+      #   extraOptions = [ "--pull=missing" "--network=hub-firecrawl" ];
+      # };
+      # firecrawl = {
+      #   image = "ghcr.io/mendableai/firecrawl:latest";  # ← verify tag
+      #   autoStart = true;
+      #   dependsOn = [ "firecrawl-redis" ];
+      #   ports = [ "127.0.0.1:3002:3002" ];
+      #   environment = {
+      #     NUM_WORKERS_PER_QUEUE = "8";
+      #     PORT = "3002";
+      #     HOST = "0.0.0.0";
+      #     REDIS_URL = "redis://firecrawl-redis:6379";
+      #     REDIS_RATE_LIMIT_URL = "redis://firecrawl-redis:6379";
+      #     PLAYWRIGHT_MICROSERVICE_URL = "";
+      #     USE_DB_AUTHENTICATION = "false";
+      #     BULL_AUTH_KEY = "";
+      #     POSTHOG_API_KEY = "";
+      #   };
+      #   extraOptions = [ "--pull=missing" "--network=hub-firecrawl" ];
+      # };
 
       # -------------------------------------------------------------------
       # SilverBullet — markdown-first PKM with live queries + agents.
+      # DISABLED — requires /var/lib/hub/silverbullet/env with SB_USER=user:pass
+      #   sudo install -d -o root -g root -m 0700 /var/lib/hub/silverbullet
+      #   printf 'SB_USER=main:%s\n' "$(openssl rand -hex 24)" \
+      #     | sudo install -m 0400 /dev/stdin /var/lib/hub/silverbullet/env
       # -------------------------------------------------------------------
-      silverbullet = {
-        image = "docker.io/zefhemel/silverbullet:latest";
-        autoStart = true;
-        ports = [ "127.0.0.1:3025:3000" ];
-        volumes = [ "/var/lib/hub/silverbullet:/space" ];
-        environmentFiles = [ "/var/lib/hub/silverbullet/env" ]; # SB_USER=user:pass
-        extraOptions = [ "--pull=missing" ];
-      };
+      # silverbullet = {
+      #   image = "docker.io/zefhemel/silverbullet:latest";
+      #   autoStart = true;
+      #   ports = [ "127.0.0.1:3025:3000" ];
+      #   volumes = [ "/var/lib/hub/silverbullet:/space" ];
+      #   environmentFiles = [ "/var/lib/hub/silverbullet/env" ];
+      #   extraOptions = [ "--pull=missing" ];
+      # };
 
       # -------------------------------------------------------------------
       # Kiwix serve — offline Wikipedia + Stack Exchange dumps.
-      # Download .zim files into /srv/nas/kiwix beforehand (e.g. via
-      # https://download.kiwix.org/zim/wikipedia/).
+      # DISABLED — needs at least one .zim file + library.xml at
+      # /srv/nas/kiwix. Download from https://download.kiwix.org/zim/,
+      # generate library.xml with:
+      #   sudo kiwix-manage /srv/nas/kiwix/library.xml add /srv/nas/kiwix/*.zim
+      # then uncomment below.
       # -------------------------------------------------------------------
-      kiwix = {
-        image = "ghcr.io/kiwix/kiwix-serve:latest";
-        autoStart = true;
-        ports = [ "127.0.0.1:8087:8080" ];
-        volumes = [ "/srv/nas/kiwix:/data:ro" ];
-        cmd = [
-          "--library"
-          "/data/library.xml"
-        ];
-        extraOptions = [ "--pull=missing" ];
-      };
+      # kiwix = {
+      #   image = "ghcr.io/kiwix/kiwix-serve:latest";
+      #   autoStart = true;
+      #   ports = [ "127.0.0.1:8087:8080" ];
+      #   volumes = [ "/srv/nas/kiwix:/data:ro" ];
+      #   cmd = [ "--library" "/data/library.xml" ];
+      #   extraOptions = [ "--pull=missing" ];
+      # };
 
       # -------------------------------------------------------------------
       # Archivebox — full-page archival (WARC + PDF + screenshot).
-      # Sinergico with Karakeep: link → both.
+      # DISABLED — requires /var/lib/hub/archivebox/env with ADMIN_PASSWORD:
+      #   sudo install -d -o root -g root -m 0700 /var/lib/hub/archivebox
+      #   printf 'ADMIN_PASSWORD=%s\n' "$(openssl rand -base64 24)" \
+      #     | sudo install -m 0400 /dev/stdin /var/lib/hub/archivebox/env
       # -------------------------------------------------------------------
-      archivebox = {
-        image = "docker.io/archivebox/archivebox:latest";
-        autoStart = true;
-        ports = [ "127.0.0.1:8088:8000" ];
-        volumes = [ "/var/lib/hub/archivebox:/data" ];
-        environmentFiles = [ "/var/lib/hub/archivebox/env" ]; # ADMIN_PASSWORD
-        environment = {
-          ADMIN_USERNAME = "admin";
-          ALLOWED_HOSTS = "*";
-          PUBLIC_INDEX = "False";
-          PUBLIC_SNAPSHOTS = "False";
-        };
-        cmd = [
-          "server"
-          "--quick-init"
-          "0.0.0.0:8000"
-        ];
-        extraOptions = [ "--pull=missing" ];
-      };
+      # archivebox = {
+      #   image = "docker.io/archivebox/archivebox:latest";
+      #   autoStart = true;
+      #   ports = [ "127.0.0.1:8088:8000" ];
+      #   volumes = [ "/var/lib/hub/archivebox:/data" ];
+      #   environmentFiles = [ "/var/lib/hub/archivebox/env" ];
+      #   environment = {
+      #     ADMIN_USERNAME = "admin";
+      #     ALLOWED_HOSTS = "*";
+      #     PUBLIC_INDEX = "False";
+      #     PUBLIC_SNAPSHOTS = "False";
+      #   };
+      #   cmd = [ "server" "--quick-init" "0.0.0.0:8000" ];
+      #   extraOptions = [ "--pull=missing" ];
+      # };
 
       # -------------------------------------------------------------------
       # OpenBB Platform — investment research (equity/bond/crypto/macro).

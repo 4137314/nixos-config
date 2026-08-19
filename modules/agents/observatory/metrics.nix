@@ -40,30 +40,47 @@ let
       final=${textfileDir}/observatory.prom
       mkdir -p ${textfileDir}
 
+      # Guard: reads the bus file, slurps it into an array, then filters
+      # out anything that isn't a well-formed event object. Malformed
+      # rows (blank lines, stray strings, half-written events) never
+      # reach the aggregation, so a corrupt bus never breaks metrics.
+      valid_events() {
+        [ -f "${bus}" ] || { echo '[]'; return; }
+        jq -sc '
+          map(select(
+            type == "object"
+            and has("agent")
+            and has("type")
+            and has("ts")
+          ))
+        ' "${bus}" 2>/dev/null || echo '[]'
+      }
+
+      EVENTS=$(valid_events)
+
       {
         echo "# HELP obs_events_total Number of observatory events by agent + type."
         echo "# TYPE obs_events_total counter"
-        if [ -f "${bus}" ]; then
-          jq -r 'group_by([.agent,.type])
-                 | map({agent:.[0].agent, type:.[0].type, n:length})
-                 | .[]
-                 | "obs_events_total{agent=\"\(.agent)\",type=\"\(.type)\"} \(.n)"' \
-             "${bus}"
-        fi
+        printf '%s' "$EVENTS" | jq -r '
+          group_by([.agent, .type])
+          | map({agent:.[0].agent, type:.[0].type, n:length})
+          | .[]
+          | "obs_events_total{agent=\"\(.agent)\",type=\"\(.type)\"} \(.n)"
+        '
 
         echo "# HELP obs_events_last_ts Unix epoch of last event from agent."
         echo "# TYPE obs_events_last_ts gauge"
-        if [ -f "${bus}" ]; then
-          jq -r 'group_by(.agent)
-                 | map({agent:.[0].agent, ts:(max_by(.ts).ts)})
-                 | .[]
-                 | "obs_events_last_ts{agent=\"\(.agent)\"} \((.ts | sub("Z$";"+00:00") | fromdateiso8601))"' \
-             "${bus}"
-        fi
+        printf '%s' "$EVENTS" | jq -r '
+          group_by(.agent)
+          | map({agent:.[0].agent, ts:(max_by(.ts).ts)})
+          | .[]
+          | "obs_events_last_ts{agent=\"\(.agent)\"} \((.ts | sub("Z$";"+00:00") | fromdateiso8601))"
+        '
 
         cutoff=$(date -u -d '24 hours ago' +%Y-%m-%dT%H:%M:%SZ)
-        active=$(obs-event query --since="$cutoff" --limit=10000 2>/dev/null \
-                 | jq -s '[.[] | .correlation_id // .id] | unique | length')
+        active=$(printf '%s' "$EVENTS" | jq --arg c "$cutoff" '
+          [.[] | select(.ts >= $c) | (.correlation_id // .id)] | unique | length
+        ')
         echo "# HELP obs_workflows_active Distinct correlation_ids in the last 24h."
         echo "# TYPE obs_workflows_active gauge"
         echo "obs_workflows_active ''${active:-0}"

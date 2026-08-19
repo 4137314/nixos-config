@@ -185,16 +185,16 @@ rec {
           ;;
 
         *)
-          cat >&2 <<'USAGE'
-        Usage:
-          obs-event publish AGENT TYPE PAYLOAD [--cause=ID] [--correlation=ID]
-              Appends an event to the bus. Prints the new ID on stdout.
-          obs-event tail [N]                            Last N events.
-          obs-event since ISO8601                       Events with ts >= cutoff.
-          obs-event query [--type=T] [--agent=A] [--since=ISO] [--limit=N]
-              Filtered feed.
-          obs-event chain ID                            Walk the causal chain.
-        USAGE
+          {
+            echo "Usage:"
+            echo "  obs-event publish AGENT TYPE PAYLOAD [--cause=ID] [--correlation=ID]"
+            echo "      Appends an event to the bus. Prints the new ID on stdout."
+            echo "  obs-event tail [N]                            Last N events."
+            echo "  obs-event since ISO8601                       Events with ts >= cutoff."
+            echo "  obs-event query [--type=T] [--agent=A] [--since=ISO] [--limit=N]"
+            echo "      Filtered feed."
+            echo "  obs-event chain ID                            Walk the causal chain."
+          } >&2
           exit 2
           ;;
       esac

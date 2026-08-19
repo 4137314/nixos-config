@@ -68,14 +68,23 @@ in
     obs-event
   ];
 
+  # `obs-bus` is the write ACL for the event bus. Every publisher (all
+  # observatory agents run as root; every topical agent from
+  # `agents/{ops,personal,knowledge}` runs as `agent-<name>` with this
+  # group appended in `agents/lib.nix`) is a member. Readers do not
+  # need the group — the file is world-readable so `cat` / `jq` work
+  # for the interactive user.
+  users.groups.obs-bus = { };
+
   # Shared on-disk layout — passive.nix / active.nix declare their own
   # per-agent dirs; here we own the root + the bus file itself.
   systemd.tmpfiles.rules = [
-    "d ${outputDir}                0755 root users -"
-    "d ${outputDir}/doctor         0755 root users -"
-    "d ${outputDir}/analyst        0755 root users -"
-    "d ${outputDir}/triage         0755 root users -"
-    "d ${outputDir}/diary          0755 root users -"
-    "f ${outputDir}/events.jsonl   0664 root users -"
+    "d ${outputDir}                        0755 root users   -"
+    "d ${outputDir}/doctor                 0755 root users   -"
+    "d ${outputDir}/analyst                0755 root users   -"
+    "d ${outputDir}/triage                 0755 root users   -"
+    "d ${outputDir}/diary                  0755 root users   -"
+    "f ${outputDir}/events.jsonl           0664 root obs-bus -"
+    "f ${outputDir}/events.jsonl.lock      0664 root obs-bus -"
   ];
 }

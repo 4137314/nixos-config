@@ -26,8 +26,8 @@ on:
 # any `permissions:` block replaces the defaults entirely — so we must
 # also grant `contents: read` for actions/checkout to succeed.
 permissions:
-  contents: read       # actions/checkout
-  issues: write        # labels are attached to issues
+  contents: read # actions/checkout
+  issues: write # labels are attached to issues
   pull-requests: write # …and to pull-requests
 
 jobs:

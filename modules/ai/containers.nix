@@ -38,11 +38,14 @@ let
   # Every image is pulled lazily on first start.
   pullMissing = [ "--pull=missing" ];
 
-  # Grants access to services listening on the host loopback.
-  hostGateway = [ "--add-host=host.containers.internal:host-gateway" ];
-
   # Attach a container to the SearXNG/Perplexica isolated network.
   onSearchNet = [ "--network=ai-search" ];
+
+  # `hostGateway` (--add-host=host.containers.internal:host-gateway) was
+  # only needed by the currently disabled perplexica + flowise blocks.
+  # Bring it back if you re-enable a container that must reach the host
+  # loopback (e.g. Ollama at 127.0.0.1:11434 from inside a container):
+  #   hostGateway = [ "--add-host=host.containers.internal:host-gateway" ];
 in
 {
   # Pinned explicitly so `ai/containers.nix` never silently falls back
@@ -108,46 +111,54 @@ in
 
     # ---------------------------------------------------------------------
     # Perplexica — LLM-powered search UI (uses SearXNG + Ollama).
+    # DISABLED — Perplexica needs a `config.toml` (bind, API URLs,
+    # provider keys) at /var/lib/ai/perplexica/config/config.toml. Copy
+    # the sample from https://github.com/ItzCrazyKns/Perplexica and edit,
+    # then uncomment below.
     # ---------------------------------------------------------------------
-    perplexica = {
-      image = "ghcr.io/itzcrazykns1337/perplexica:main";
-      autoStart = true;
-      dependsOn = [ "searxng" ];
-      ports = [ (loopback 3010 3000) ];
-      volumes = [
-        "/var/lib/ai/perplexica/config:/home/perplexica/config"
-        "/var/lib/ai/perplexica/data:/home/perplexica/data"
-        "/var/lib/ai/perplexica/uploads:/home/perplexica/uploads"
-      ];
-      environment = {
-        SEARXNG_API_URL = "http://searxng:8080";
-        OLLAMA_API_URL = "http://host.containers.internal:11434";
-        NEXT_PUBLIC_API_URL = "https://perplex.nixos-hacker-box/api";
-        NEXT_PUBLIC_WS_URL = "wss://perplex.nixos-hacker-box";
-      };
-      extraOptions = pullMissing ++ onSearchNet ++ hostGateway;
-    };
+    # perplexica = {
+    #   image = "ghcr.io/itzcrazykns1337/perplexica:main";
+    #   autoStart = true;
+    #   dependsOn = [ "searxng" ];
+    #   ports = [ (loopback 3010 3000) ];
+    #   volumes = [
+    #     "/var/lib/ai/perplexica/config:/home/perplexica/config"
+    #     "/var/lib/ai/perplexica/data:/home/perplexica/data"
+    #     "/var/lib/ai/perplexica/uploads:/home/perplexica/uploads"
+    #   ];
+    #   environment = {
+    #     SEARXNG_API_URL = "http://searxng:8080";
+    #     OLLAMA_API_URL = "http://host.containers.internal:11434";
+    #     NEXT_PUBLIC_API_URL = "https://perplex.nixos-hacker-box/api";
+    #     NEXT_PUBLIC_WS_URL = "wss://perplex.nixos-hacker-box";
+    #   };
+    #   extraOptions = pullMissing ++ onSearchNet ++ hostGateway;
+    # };
 
     # ---------------------------------------------------------------------
     # Flowise — visual editor for LangChain agent workflows.
+    # DISABLED — needs /var/lib/ai/flowise.env with:
+    #   sudo install -d -o root -g root /var/lib/ai
+    #   printf 'FLOWISE_PASSWORD=%s\n' "$(openssl rand -base64 24)" \
+    #     | sudo install -m 0400 /dev/stdin /var/lib/ai/flowise.env
+    # Then uncomment below.
     # ---------------------------------------------------------------------
-    flowise = {
-      image = "docker.io/flowiseai/flowise:latest";
-      autoStart = true;
-      ports = [ (loopback 3009 3000) ];
-      volumes = [ "/var/lib/ai/flowise:/root/.flowise" ];
-      environmentFiles = [ "/var/lib/ai/flowise.env" ];
-      environment = {
-        PORT = "3000";
-        DATABASE_PATH = "/root/.flowise";
-        APIKEY_PATH = "/root/.flowise";
-        SECRETKEY_PATH = "/root/.flowise";
-        LOG_PATH = "/root/.flowise/logs";
-        FLOWISE_USERNAME = "admin";
-        # FLOWISE_PASSWORD is injected from `environmentFiles` above.
-      };
-      extraOptions = pullMissing ++ hostGateway;
-    };
+    # flowise = {
+    #   image = "docker.io/flowiseai/flowise:latest";
+    #   autoStart = true;
+    #   ports = [ (loopback 3009 3000) ];
+    #   volumes = [ "/var/lib/ai/flowise:/root/.flowise" ];
+    #   environmentFiles = [ "/var/lib/ai/flowise.env" ];
+    #   environment = {
+    #     PORT = "3000";
+    #     DATABASE_PATH = "/root/.flowise";
+    #     APIKEY_PATH = "/root/.flowise";
+    #     SECRETKEY_PATH = "/root/.flowise";
+    #     LOG_PATH = "/root/.flowise/logs";
+    #     FLOWISE_USERNAME = "admin";
+    #   };
+    #   extraOptions = pullMissing ++ hostGateway;
+    # };
   };
 
   # -----------------------------------------------------------------------

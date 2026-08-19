@@ -107,6 +107,31 @@ Three axes to tag every issue / PR:
 - **Scope** — matches a `modules/<x>/` directory (`scope:hub`, …).
 - **Priority + status** — see the yml file for the palette.
 
+## Project board
+
+Roadmap + backlog live on the
+[**nixos-hacker-box Roadmap** Project v2](https://github.com/users/4137314/projects/12).
+
+Custom fields:
+
+- **Priority** — populated from the `priority:*` label
+- **Effort** — populated from the `effort:*` label
+- **Status** — default Todo / In Progress / Done
+- **Milestone** — v1.0-baseline · v1.1-observability · v1.2-self-healing · v2.0-secrets-migration
+
+New issues and PRs are added automatically by
+[`.github/workflows/project-add.yml`](workflows/project-add.yml).
+Priority / Effort are pulled from labels — apply the right
+`priority:pX-*` and `effort:*` labels and the project view sorts
+itself.
+
+Views to consult:
+
+- **Kanban** — status swimlanes for daily triage
+- **Roadmap** — grouped by milestone, sorted by priority
+- **By scope** — grouped by `scope:*` label, useful before touching
+  a module tree (see what's in flight there)
+
 ## Pull request checklist
 
 - [ ] `make check` passes.

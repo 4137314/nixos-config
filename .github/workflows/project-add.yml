@@ -1,0 +1,41 @@
+# .github/workflows/project-add.yml
+#
+# Every newly opened issue (or PR) is automatically added to the
+# user-level Project v2 "nixos-hacker-box Roadmap"
+# (https://github.com/users/4137314/projects/12), so nothing falls
+# through the cracks — no manual "add to project" click.
+#
+# Priority + Effort custom fields are populated LATER by a separate
+# workflow that reads the `priority:*` and `effort:*` labels once
+# they are applied (either by the reporter or via auto-label).
+# This split keeps the auto-add path fast and free of label races.
+#
+# NB: the project sits on the USER, not the repo — actions/add-to-project
+# with `project-url: users/…` handles that. The PAT needs the `project`
+# scope; we use a repo-secret `ADD_TO_PROJECT_TOKEN` because
+# GITHUB_TOKEN cannot write to user-level projects.
+#
+# One-shot bootstrap (already done, kept here as documentation):
+#   gh secret set ADD_TO_PROJECT_TOKEN --body "$(gh auth token)"
+
+name: Project — add new items
+
+on:
+  issues:
+    types: [opened, reopened]
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  add:
+    name: Add to Roadmap
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add issue / PR to project
+        uses: actions/add-to-project@v1.0.2
+        with:
+          project-url: https://github.com/users/4137314/projects/12
+          github-token: ${{ secrets.ADD_TO_PROJECT_TOKEN }}

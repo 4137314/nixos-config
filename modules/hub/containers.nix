@@ -358,26 +358,28 @@ in
 
       # -------------------------------------------------------------------
       # Archivebox — full-page archival (WARC + PDF + screenshot).
-      # DISABLED — requires /var/lib/hub/archivebox/env with ADMIN_PASSWORD:
-      #   sudo install -d -o root -g root -m 0700 /var/lib/hub/archivebox
-      #   printf 'ADMIN_PASSWORD=%s\n' "$(openssl rand -base64 24)" \
-      #     | sudo install -m 0400 /dev/stdin /var/lib/hub/archivebox/env
+      # ADMIN_PASSWORD is auto-provisioned on first boot by the
+      # `archivebox-secret-init` oneshot (see ./archivebox-init.nix).
       # -------------------------------------------------------------------
-      # archivebox = {
-      #   image = "docker.io/archivebox/archivebox:latest";
-      #   autoStart = true;
-      #   ports = [ "127.0.0.1:8088:8000" ];
-      #   volumes = [ "/var/lib/hub/archivebox:/data" ];
-      #   environmentFiles = [ "/var/lib/hub/archivebox/env" ];
-      #   environment = {
-      #     ADMIN_USERNAME = "admin";
-      #     ALLOWED_HOSTS = "*";
-      #     PUBLIC_INDEX = "False";
-      #     PUBLIC_SNAPSHOTS = "False";
-      #   };
-      #   cmd = [ "server" "--quick-init" "0.0.0.0:8000" ];
-      #   extraOptions = [ "--pull=missing" ];
-      # };
+      archivebox = {
+        image = "docker.io/archivebox/archivebox:latest";
+        autoStart = true;
+        ports = [ "127.0.0.1:8088:8000" ];
+        volumes = [ "/var/lib/hub/archivebox:/data" ];
+        environmentFiles = [ "/var/lib/hub/archivebox/env" ];
+        environment = {
+          ADMIN_USERNAME = "admin";
+          ALLOWED_HOSTS = "*";
+          PUBLIC_INDEX = "False";
+          PUBLIC_SNAPSHOTS = "False";
+        };
+        cmd = [
+          "server"
+          "--quick-init"
+          "0.0.0.0:8000"
+        ];
+        extraOptions = [ "--pull=missing" ];
+      };
 
       # -------------------------------------------------------------------
       # OpenBB Platform — investment research (equity/bond/crypto/macro).

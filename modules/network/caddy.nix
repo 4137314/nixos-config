@@ -129,7 +129,7 @@ in
       # "crawl.nixos-hacker-box".extraConfig   = proxyBlock "127.0.0.1:3002";  # firecrawl
       # "sb.nixos-hacker-box".extraConfig      = proxyBlock "127.0.0.1:3025";  # silverbullet
       # "kiwix.nixos-hacker-box".extraConfig   = proxyBlock "127.0.0.1:8087";  # kiwix
-      # "archive.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:8088";  # archivebox
+      "archive.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:8088";
       # "openbb.nixos-hacker-box".extraConfig  = proxyBlock "127.0.0.1:6900";  # openbb
       "budget.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:5006";
 

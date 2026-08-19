@@ -122,21 +122,9 @@ _: {
     # ./modules/ai/iot.nix               # enable after plugging Zigbee coordinator
     # ./modules/ai/frigate.nix           # enable after adding IP cameras
 
-    # Autonomous LLM pipelines — enable one at a time as agent tokens are
-    # provisioned in /var/lib/agents/.
-    # ./modules/agents
-
-    # Observatory suite — modularised self-reflective agent system.
-    # See modules/agents/observatory/default.nix for the ASCII diagram
-    # of how passive/active agents talk over the shared event bus with
-    # correlation + causation IDs. Split into:
-    #   lib.nix       shared CLIs (obs-ask, obs-ntfy, obs-event)
-    #   passive.nix   doctor, analyst, triage, diary
-    #   active.nix    healer (allowlist+cooldown), janitor, brain
-    #   rag.nix       obs-rag query CLI (Qdrant)
-    #   indexer.nix   4-hourly Qdrant re-index
-    #   distill.nix   opt-in CPU distillation (no timer)
-    #   metrics.nix   Prometheus counters via textfile collector
-    ./modules/agents/observatory
+    # Agent suites (observatory is always on; ops/personal/knowledge are
+    # opt-in inside modules/agents/default.nix). See that file for the
+    # per-suite prerequisites and the tokens layout under /var/lib/agents/.
+    ./modules/agents
   ];
 }

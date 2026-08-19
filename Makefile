@@ -50,7 +50,7 @@ dry: git-add
 # CI / Quality pipeline
 # ──────────────────────────────────────────────────────────────────────────────
 
-check: eval lint dead
+check: eval lint dead build
 	@echo ""
 	@echo "✓ All checks passed — safe to run 'make switch'"
 
@@ -58,6 +58,14 @@ eval: git-add
 	@echo "→ Evaluating NixOS configuration..."
 	@nix eval $(TARGET).config.system.build.toplevel --json > /dev/null
 	@echo "✓ eval"
+
+# Actually BUILDS the toplevel derivation (writeShellApplication runs
+# shellcheck + bash -n here). `eval` alone does NOT catch these — many
+# real bugs hide in shell script bodies embedded in Nix.
+build: git-add
+	@echo "→ Building toplevel derivation (shellcheck, bash -n, …)..."
+	@nix build $(TARGET).config.system.build.toplevel --no-link
+	@echo "✓ build"
 
 lint: git-add
 	@echo "→ statix (Nix linter)..."

@@ -30,6 +30,9 @@ name: release-please
 on:
   push:
     branches: [master]
+  # Allow manual re-runs from the Actions tab (useful after tweaking
+  # config/manifest or after a permissions fix).
+  workflow_dispatch: {}
 
 permissions:
   contents: write        # tag, release, commit CHANGELOG

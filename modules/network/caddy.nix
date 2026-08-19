@@ -95,13 +95,17 @@ in
       "status.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:3001";
 
       # -- Personal Hub — container services --------------------------------
-      "home.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:8085";
+      # Vhost entries are commented out ONLY for containers whose backing
+      # podman service is currently disabled in hub/containers.nix or
+      # ai/containers.nix. Re-enable both the container block AND the
+      # matching vhost here when you provision the required config/env.
+      # "home.nixos-hacker-box".extraConfig    = proxyBlock "127.0.0.1:8085";  # glance
       "watch.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:5000";
-      "links.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:3005";
+      # "links.nixos-hacker-box".extraConfig   = proxyBlock "127.0.0.1:3005";  # karakeep
       "notes.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:5230";
       "flow.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:5678";
-      "money.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:8083";
-      "invest.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:3333";
+      # "money.nixos-hacker-box".extraConfig   = proxyBlock "127.0.0.1:8083";  # firefly
+      # "invest.nixos-hacker-box".extraConfig  = proxyBlock "127.0.0.1:3333";  # ghostfolio
       "tools.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:8880";
       "cyber.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:8886";
 
@@ -110,8 +114,8 @@ in
       "ollama.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:11434";
       "qdrant.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:6333";
       "search.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:8889";
-      "perplex.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:3010";
-      "flow-ai.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:3009";
+      # "perplex.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:3010";  # perplexica
+      # "flow-ai.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:3009";  # flowise
       "ha.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:8123";
 
       # -- IoT + NVR ----------------------------------------------------------
@@ -122,12 +126,11 @@ in
       # -- Hub extras (Trilium, scraping, knowledge, finance) ----------------
       "wiki.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:8082";
       "rss-bridge.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:3062";
-      "crawl.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:3002";
-      "sb.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:3025";
-      "kiwix.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:8087";
-      "archive.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:8088";
-      # "openbb.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:6900";
-      # ↑ disabled together with hub/containers.nix openbb (bad image).
+      # "crawl.nixos-hacker-box".extraConfig   = proxyBlock "127.0.0.1:3002";  # firecrawl
+      # "sb.nixos-hacker-box".extraConfig      = proxyBlock "127.0.0.1:3025";  # silverbullet
+      # "kiwix.nixos-hacker-box".extraConfig   = proxyBlock "127.0.0.1:8087";  # kiwix
+      # "archive.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:8088";  # archivebox
+      # "openbb.nixos-hacker-box".extraConfig  = proxyBlock "127.0.0.1:6900";  # openbb
       "budget.nixos-hacker-box".extraConfig = proxyBlock "127.0.0.1:5006";
 
       # -- Attic self-hosted binary cache ------------------------------------

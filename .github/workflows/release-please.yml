@@ -1,0 +1,48 @@
+# .github/workflows/release-please.yml
+#
+# Google's release-please: reads Conventional Commits on every push
+# to master, decides the semver bump (fix→patch, feat→minor,
+# `feat!:`/`BREAKING CHANGE:` → major), and opens a self-updating
+# "release" PR containing:
+#
+#   * bump of the version marker in `.release-please-manifest.json`
+#   * generated `CHANGELOG.md` grouped by type (features, fixes, …)
+#
+# When you merge that PR, release-please then:
+#
+#   * creates the git tag `v<X.Y.Z>` on the merge commit,
+#   * publishes a GitHub Release with the changelog as body,
+#   * loops back listening for the next batch of commits.
+#
+# Semver policy (documented in CONTRIBUTING.md):
+#   * PRE-1.0 (`0.x.y`) — the flake as an "importable API" is not
+#     stable; MINOR bumps may still introduce breaking module renames.
+#     Path to 1.0.0 = sops-nix migration finished (see milestone).
+#   * POST-1.0 — strict semver: only `feat!:` / `BREAKING CHANGE:`
+#     footer triggers a major bump.
+#
+# Config file: `.release-please-config.json` (release type "simple",
+# no lockfile bumps — a Nix flake doesn't have a version field to
+# rewrite). The manifest tracks the current released version.
+
+name: release-please
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: write        # tag, release, commit CHANGELOG
+  pull-requests: write   # open the release PR
+  issues: write          # comment on issues that are closed by the release
+
+jobs:
+  release-please:
+    name: Version + changelog
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          # Path to the config file (see .release-please-config.json below).
+          config-file: .release-please-config.json
+          manifest-file: .release-please-manifest.json

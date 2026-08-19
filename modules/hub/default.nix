@@ -51,6 +51,7 @@ _: {
 
     # OCI containers (podman) — one file, many services.
     ./containers.nix
+    ./archivebox-init.nix # auto-provision ADMIN_PASSWORD
 
     # Cross-cutting: cap the restart burst of EVERY podman-* unit so a
     # broken container never spins forever and stalls multi-user.target.

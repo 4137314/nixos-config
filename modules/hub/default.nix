@@ -51,5 +51,9 @@ _: {
 
     # OCI containers (podman) — one file, many services.
     ./containers.nix
+
+    # Cross-cutting: cap the restart burst of EVERY podman-* unit so a
+    # broken container never spins forever and stalls multi-user.target.
+    ./podman-hardening.nix
   ];
 }

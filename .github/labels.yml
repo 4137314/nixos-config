@@ -1,0 +1,166 @@
+# .github/labels.yml — declarative label catalogue for the repo.
+#
+# Synced to GitHub by `.github/workflows/labels-sync.yml` on every
+# push to master. Adding a label = edit this file + push. Deleting =
+# remove from this file (existing issues keep it until manual clean).
+#
+# Colour palette
+# --------------
+#   type       intense hues  (fix=red, feat=green, refactor=violet, ...)
+#   scope      neutral greys / pale colours (agents, hub, ai, network, ...)
+#   status     bright hues   (blocked=orange, in-progress=yellow, ...)
+#   priority   red gradient  (p0-critical→p3-low)
+#   effort     blue gradient (xs→xl)
+
+# ---------------------------------------------------------------------------
+# Type — matches Conventional Commits prefixes.
+# ---------------------------------------------------------------------------
+- name: "type:feat"
+  color: "0e8a16"
+  description: "New capability."
+- name: "type:fix"
+  color: "d73a4a"
+  description: "Bug fix."
+- name: "type:refactor"
+  color: "8250df"
+  description: "No behaviour change; internal restructuring."
+- name: "type:docs"
+  color: "0075ca"
+  description: "Documentation-only change."
+- name: "type:chore"
+  color: "cfd3d7"
+  description: "Tooling, deps, CI plumbing."
+- name: "type:sec"
+  color: "b60205"
+  description: "Security-relevant."
+- name: "type:test"
+  color: "fbca04"
+  description: "Adds or fixes tests."
+- name: "type:perf"
+  color: "5319e7"
+  description: "Performance improvement."
+
+# ---------------------------------------------------------------------------
+# Scope — matches modules/<scope>/ directories.
+# ---------------------------------------------------------------------------
+- name: "scope:agents"
+  color: "c5def5"
+  description: "modules/agents/**"
+- name: "scope:ai"
+  color: "c5def5"
+  description: "modules/ai/**"
+- name: "scope:backup"
+  color: "c5def5"
+  description: "modules/backup/**"
+- name: "scope:cloud"
+  color: "c5def5"
+  description: "modules/cloud/**"
+- name: "scope:development"
+  color: "c5def5"
+  description: "modules/development/**"
+- name: "scope:hardware"
+  color: "c5def5"
+  description: "modules/hardware/**"
+- name: "scope:home"
+  color: "c5def5"
+  description: "modules/home/** (Home Manager)"
+- name: "scope:hub"
+  color: "c5def5"
+  description: "modules/hub/** (self-hosted containers)"
+- name: "scope:media"
+  color: "c5def5"
+  description: "modules/media/**"
+- name: "scope:monitoring"
+  color: "c5def5"
+  description: "modules/monitoring/**"
+- name: "scope:nas"
+  color: "c5def5"
+  description: "modules/nas/**"
+- name: "scope:network"
+  color: "c5def5"
+  description: "modules/network/**"
+- name: "scope:security"
+  color: "c5def5"
+  description: "modules/security/**"
+- name: "scope:system"
+  color: "c5def5"
+  description: "modules/system/**"
+- name: "scope:workstation"
+  color: "c5def5"
+  description: "modules/workstation/**"
+- name: "scope:ci"
+  color: "c5def5"
+  description: ".github/** and repo-level tooling."
+
+# ---------------------------------------------------------------------------
+# Status — issue lifecycle.
+# ---------------------------------------------------------------------------
+- name: "status:triage"
+  color: "fbca04"
+  description: "Needs classification."
+- name: "status:blocked"
+  color: "e99695"
+  description: "Waiting on external dep or upstream fix."
+- name: "status:in-progress"
+  color: "1d76db"
+  description: "Someone is actively working on this."
+- name: "status:needs-info"
+  color: "d876e3"
+  description: "Reporter needs to supply more detail."
+- name: "status:wontfix"
+  color: "cfd3d7"
+  description: "Intentionally not addressed."
+
+# ---------------------------------------------------------------------------
+# Priority.
+# ---------------------------------------------------------------------------
+- name: "priority:p0-critical"
+  color: "b60205"
+  description: "System is down / data loss risk. Drop everything."
+- name: "priority:p1-high"
+  color: "d93f0b"
+  description: "Major functionality broken but a workaround exists."
+- name: "priority:p2-medium"
+  color: "fbca04"
+  description: "Nice to fix soon."
+- name: "priority:p3-low"
+  color: "c2e0c6"
+  description: "Cosmetic or long-tail."
+
+# ---------------------------------------------------------------------------
+# Effort — rough T-shirt sizing (for planning).
+# ---------------------------------------------------------------------------
+- name: "effort:xs"
+  color: "e6f1f7"
+  description: "< 30 min."
+- name: "effort:s"
+  color: "b3d7ec"
+  description: "30 min – 2 h."
+- name: "effort:m"
+  color: "5aa2d3"
+  description: "Half a day."
+- name: "effort:l"
+  color: "1d5a8f"
+  description: "Multiple days."
+- name: "effort:xl"
+  color: "0a2e4d"
+  description: "Weeks; probably needs decomposition."
+
+# ---------------------------------------------------------------------------
+# Special.
+# ---------------------------------------------------------------------------
+- name: "good-first-issue"
+  color: "7057ff"
+  description: "Approachable entry point for new contributors."
+- name: "help-wanted"
+  color: "008672"
+  description: "Extra input welcome."
+- name: "deps"
+  color: "0366d6"
+  description: "Dependency update (dependabot / renovate)."
+- name: "automated"
+  color: "ededed"
+  description: "Opened by a bot; usually needs a rubber-stamp review."
+- name: "ci"
+  color: "ededed"
+  description: ".github/workflows/**"

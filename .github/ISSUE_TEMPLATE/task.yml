@@ -1,0 +1,95 @@
+# .github/ISSUE_TEMPLATE/task.yml
+#
+# Task / chore issue — for follow-up work items that are neither a bug
+# nor a user-facing feature request (e.g. "re-enable karakeep once
+# NEXTAUTH_SECRET is provisioned", "backfill nix-reviewer audit fixes").
+#
+# Bugs                  → bug.yml
+# User-facing features  → feature.yml
+# Ops / chores / TODOs  → this file
+
+name: "🛠️  Task"
+description: "Chore, follow-up work, or documented TODO."
+title: "task: <short imperative>"
+labels: ["type:chore", "status:triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for internal work that isn't a bug and isn't a
+        user-visible feature — refactors, documentation follow-ups,
+        service re-enablement after manual bootstrap, etc.
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: One-paragraph description of what "done" looks like.
+      placeholder: |
+        Re-enable podman-karakeep.service after provisioning
+        /var/lib/hub/karakeep/env with NEXTAUTH_SECRET + MEILI_MASTER_KEY.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Concrete steps
+      description: Checklist of what to do, in order. Leave `[ ]` boxes.
+      placeholder: |
+        - [ ] Generate secrets with `openssl rand -base64 36`
+        - [ ] Provision `/var/lib/hub/karakeep/env` with correct perms
+        - [ ] Uncomment the `karakeep` block in modules/hub/containers.nix
+        - [ ] Uncomment the `links.nixos-hacker-box` vhost in modules/network/caddy.nix
+        - [ ] `make check` + `nixos-rebuild switch`
+        - [ ] Verify container is `active` and reachable via Caddy
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context / links
+      description: Related commits, docs, upstream issues.
+      placeholder: |
+        - Disabled in commit 4f60ec1 (fix(hub): disable containers …)
+        - Upstream docs: https://docs.karakeep.app
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      description: Which module tree does this touch?
+      options:
+        - "agents"
+        - "ai"
+        - "backup"
+        - "cloud"
+        - "development"
+        - "hardware"
+        - "home"
+        - "hub"
+        - "media"
+        - "monitoring"
+        - "nas"
+        - "network"
+        - "security"
+        - "system"
+        - "workstation"
+        - "ci"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: effort
+    attributes:
+      label: Estimated effort
+      options:
+        - "xs (< 30 min)"
+        - "s (30 min – 2 h)"
+        - "m (half a day)"
+        - "l (multiple days)"
+        - "xl (weeks — split first)"
+    validations:
+      required: true

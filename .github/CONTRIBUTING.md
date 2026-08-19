@@ -34,20 +34,78 @@ See [CLAUDE.md](../CLAUDE.md) for the full list. Short version:
 5. Every `networking.firewall.allowedTCPPorts` entry needs a one-line
    comment explaining which client uses the port.
 
+## Branch naming
+
+We follow **GitHub Flow**: `master` is the only long-lived branch.
+Every change lives on a short-lived topic branch off `master` and
+merges back via PR after CI is green.
+
+Branch prefix mirrors the commit `type`:
+
+```
+feat/<slug>       new capability
+fix/<slug>        bug fix
+refactor/<slug>   no behaviour change
+docs/<slug>       docs only
+chore/<slug>      deps, tooling, CI
+sec/<slug>        security-relevant
+```
+
+Slug = kebab-case, ≤ 40 chars, e.g. `feat/observatory-brain` or
+`fix/adguard-yaml-http-address`.
+
+Direct pushes to `master` are reserved for trivial one-liners (typo
+in a comment, README fix). Anything module-level goes through a PR
+so the CI matrix + reviewer eye kicks in.
+
 ## Commit messages
 
 Conventional Commits — `type(scope): summary`.
+Enforced on PR titles by `.github/workflows/commit-lint.yml`
+(via `amannn/action-semantic-pull-request`).
 
-Common types:
+Allowed types:
+`feat`, `fix`, `refactor`, `docs`, `chore`, `sec`, `test`,
+`perf`, `build`, `ci`, `revert`, `style`.
 
-- `feat:` new capability
-- `fix:` bug fix
-- `refactor:` no behaviour change
-- `docs:` docs / comments only
-- `chore:` deps, tooling, CI
-- `sec:` security-relevant change
+Subject rules:
 
-Scope is optional but useful: `feat(hub): add miniflux rss module`.
+- Lowercase first letter.
+- Imperative mood ("add", not "added" or "adds").
+- No trailing period.
+- ≤ 72 chars for the subject line; wrap the body at 72.
+
+Body (optional but strongly encouraged for anything > 3 lines):
+
+- Explain **why**, not what. The diff already shows the what.
+- Reference issues with `Refs #N` or `Closes #N`.
+
+Example:
+
+```
+fix(vikunja): use service.secret; idempotent env init
+
+`both service.secret and service.jwtsecret are set … Using
+service.secret` — upstream deprecated jwtsecret in 25.11.
+Rename `VIKUNJA_SERVICE_JWTSECRET` → `VIKUNJA_SERVICE_SECRET`;
+init script transparently migrates legacy files.
+
+Closes #42
+```
+
+## Labels
+
+The label catalogue is defined declaratively in
+[`.github/labels.yml`](labels.yml) and synced to GitHub by
+[`.github/workflows/labels-sync.yml`](workflows/labels-sync.yml).
+To add / rename / recolour a label: edit the yml, PR, merge — the
+sync workflow does the rest.
+
+Three axes to tag every issue / PR:
+
+- **Type** — matches the Conventional Commits prefix (`type:feat`, …).
+- **Scope** — matches a `modules/<x>/` directory (`scope:hub`, …).
+- **Priority + status** — see the yml file for the palette.
 
 ## Pull request checklist
 

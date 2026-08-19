@@ -1,0 +1,45 @@
+# .github/workflows/labels-sync.yml
+#
+# Keeps the label catalogue defined in `.github/labels.yml` in sync
+# with the actual GitHub labels on this repo. Adding, renaming, or
+# recolouring a label is therefore an edit + PR — no manual clicking
+# in the Settings → Labels UI, and everything is code-reviewed.
+#
+# Strategy: `micnncim/action-label-syncer` reads the yml and reconciles
+# additions, colour/description changes, and (opt-in) deletions.
+#
+# Triggers
+#   push to master     → sync only when the labels file itself changed
+#   workflow_dispatch  → manual re-run from the Actions tab
+
+name: Labels sync
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - ".github/labels.yml"
+      - ".github/workflows/labels-sync.yml"
+  workflow_dispatch: {}
+
+permissions:
+  issues: write        # labels are attached to issues
+  pull-requests: write # …and to pull-requests
+
+jobs:
+  sync:
+    name: Reconcile labels with labels.yml
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sync labels
+        uses: micnncim/action-label-syncer@v1
+        with:
+          manifest: .github/labels.yml
+          # Set to `true` to also DELETE labels not present in yml.
+          # Off for now — safer while the catalogue stabilises.
+          prune: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -112,15 +112,15 @@ Three axes to tag every issue / PR:
 Tags follow **[Semantic Versioning](https://semver.org/)** with the
 `v` prefix: `v<MAJOR>.<MINOR>.<PATCH>`.
 
-* **Pre-1.0 (`v0.x.y`)** — the flake as an "importable API" is not
+- **Pre-1.0 (`v0.x.y`)** — the flake as an "importable API" is not
   stable yet: MINOR bumps may still rename or remove modules. Path
   to `v1.0.0` = `sops-nix` migration finished for every secret file
   (tracked in milestone `v1.0.0`).
-* **Post-1.0** — strict SemVer. Only a commit prefixed `feat!:` or
+- **Post-1.0** — strict SemVer. Only a commit prefixed `feat!:` or
   containing `BREAKING CHANGE:` in the body footer bumps the major.
-* `feat:` → **MINOR** bump.
-* `fix:` / `sec:` / `perf:` / `refactor:` → **PATCH** bump.
-* `docs:` / `chore:` / `test:` / `ci:` / `build:` / `style:` →
+- `feat:` → **MINOR** bump.
+- `fix:` / `sec:` / `perf:` / `refactor:` → **PATCH** bump.
+- `docs:` / `chore:` / `test:` / `ci:` / `build:` / `style:` →
   no version bump (still show up in the changelog by section).
 
 Versioning is fully automated by

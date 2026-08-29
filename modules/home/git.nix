@@ -3,9 +3,11 @@
 
   Identity
   --------
-  User name and email are set from the user memory (mattia.fait@gmail.com).
-  Adjust here if the identity should ever change; Nix will regenerate
-  ~/.config/git/config on the next Home Manager activation.
+  Uses the GitHub `noreply` email so this file is safe to publish
+  publicly. Commits from this host will attribute to the GitHub
+  account `4137314` without leaking the operator's real address.
+  If a specific repo (work, personal SaaS, …) needs the real email
+  it can be overridden locally with `git config --local user.email`.
 
   Diff / merge quality of life
   ----------------------------
@@ -33,7 +35,7 @@
       settings = {
         user = {
           name = "Mattia Fait";
-          email = "mattia.fait@gmail.com";
+          email = "63473817+4137314@users.noreply.github.com";
         };
 
         alias = {

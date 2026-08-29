@@ -35,9 +35,9 @@ on:
   workflow_dispatch: {}
 
 permissions:
-  contents: write        # tag, release, commit CHANGELOG
-  pull-requests: write   # open the release PR
-  issues: write          # comment on issues that are closed by the release
+  contents: write # tag, release, commit CHANGELOG
+  pull-requests: write # open the release PR
+  issues: write # comment on issues that are closed by the release
 
 jobs:
   release-please:

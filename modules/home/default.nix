@@ -25,6 +25,7 @@ _: {
     ./hyprlock.nix
     ./wallpaper.nix
     ./zed.nix
+    ./pi-agent.nix
   ];
 
   home = {

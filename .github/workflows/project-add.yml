@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Add issue / PR to project
-        uses: actions/add-to-project@v1.0.2
+        uses: actions/add-to-project@v2.0.0
         with:
           project-url: https://github.com/users/4137314/projects/12
           github-token: ${{ secrets.ADD_TO_PROJECT_TOKEN }}

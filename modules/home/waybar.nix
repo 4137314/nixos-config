@@ -48,6 +48,12 @@ _: {
       "hyprland/workspaces" = {
         format = "{icon}";
         on-click = "activate";
+        # Waybar priorities `active` / `urgent` / `default` OVER the
+        # per-workspace icons when they are set — so having
+        # `active = ""` (empty string) caused the number of the active
+        # workspace to disappear entirely. Keep only the numeric map;
+        # the active-state visual differentiation is handled purely in
+        # CSS below (background + cyan text).
         format-icons = {
           "1" = "1";
           "2" = "2";
@@ -59,9 +65,6 @@ _: {
           "8" = "8";
           "9" = "9";
           "10" = "10";
-          active = "";
-          urgent = "";
-          default = "";
         };
       };
 

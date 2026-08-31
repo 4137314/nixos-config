@@ -26,7 +26,11 @@
   compositors. Without these symlinks, portal discovery via D-Bus and
   session listing at the greeter both silently fail.
 */
-{ pkgs, ... }:
+{ inputs, pkgs, ... }:
+let
+  inherit (pkgs.stdenv.hostPlatform) system;
+  hyprlandPackages = inputs.hyprland.packages.${system};
+in
 {
   services.displayManager.ly = {
     enable = true;
@@ -42,6 +46,8 @@
   # hyprland-session.target that Home Manager already wires up via exec-once.
   programs.hyprland = {
     enable = true;
+    package = hyprlandPackages.hyprland;
+    portalPackage = hyprlandPackages.xdg-desktop-portal-hyprland;
     xwayland.enable = true;
   };
 

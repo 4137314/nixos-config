@@ -1,0 +1,42 @@
+# .aider.conf.yml — Aider configuration for nixos-hacker-box.
+#
+# Points at the local Ollama endpoint so no cloud tokens leave the box by
+# default. Cloud providers (Anthropic, OpenAI) can be layered on top by
+# exporting ANTHROPIC_API_KEY / OPENAI_API_KEY before invoking aider.
+#
+# Full reference: https://aider.chat/docs/config/aider_conf.html
+
+# --- Model routing ---------------------------------------------------------
+# Local-first: qwen2.5-coder:14b is the current best local code model on
+# this box (see modules/home/pi-agent.nix `piModels.ollama`).
+model: ollama_chat/qwen2.5-coder:14b
+weak-model: ollama_chat/qwen2.5:7b
+editor-model: ollama_chat/qwen2.5-coder:14b
+
+# Point litellm at the local Ollama daemon.
+openai-api-base: http://127.0.0.1:11434/v1
+openai-api-key: ollama-local-not-a-secret
+
+# --- Repo hygiene ----------------------------------------------------------
+# Follow the same conventions as CLAUDE.md / AGENTS.md.
+read:
+  - CLAUDE.md
+  - AGENTS.md
+  - .codex/instructions.md
+
+# Never touch these files (mirror CLAUDE.md's "Files NOT to modify" list).
+# aider honours .aiderignore too — see the sibling file if present.
+
+# --- Editor / behaviour ---------------------------------------------------
+auto-commits: false # let the human write the commit message
+dirty-commits: false # never commit uncommitted user edits silently
+gitignore: true # respect .gitignore
+pretty: true
+stream: true
+show-diffs: true
+
+# --- Voice / test / lint hooks -------------------------------------------
+# treefmt + statix + deadnix already run via `nix develop` pre-commit hooks,
+# so aider only needs to flag issues, not fix them itself.
+lint: false
+test: false

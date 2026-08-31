@@ -22,7 +22,7 @@ if the CI clock is ticking.
    - `programs.git.{userName,userEmail,extraConfig,aliases}` → `settings.*`
    - `programs.git.delta` → `programs.delta` + `enableGitIntegration = true`
    - `programs.ssh.{controlMaster,serverAlive*,forwardAgent,addKeysToAgent,
- hashKnownHosts,controlPath,controlPersist}` → `matchBlocks."*".*`
+hashKnownHosts,controlPath,controlPersist}` → `matchBlocks."*".*`
      (plus `enableDefaultConfig = false`)
    - `virtualisation.libvirtd.qemu.ovmf` removed (OVMF bundled)
    - `python3Full` → `python3`

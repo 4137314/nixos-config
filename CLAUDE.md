@@ -25,7 +25,14 @@ pentest / bug-bounty rig.
 ├── modules/home/hyprland/hyprland.conf  Native Hyprland dotfile (unmanaged — read verbatim)
 ├── hardware-configuration.nix  Auto-generated — do NOT edit
 ├── Makefile                Dev pipeline (check, switch, dry, fmt, commit, …)
-├── CLAUDE.md               ← this file
+├── CLAUDE.md               ← this file — canonical AI-agent instructions
+├── AGENTS.md               → symlink to CLAUDE.md (used by Pi, Codex, others)
+├── .codex/instructions.md  → symlink to ../CLAUDE.md (Codex CLI)
+├── .cursorrules            (absent — add if adopting Cursor / Windsurf)
+├── .mcp.json               MCP servers exposed to Claude Code / clients
+├── .claude/                Repo-level agents, commands, settings (checked in)
+├── .aider.conf.yml         Aider config (local-first, Ollama)
+├── .envrc                  nix-direnv — auto-enter devShell on cd
 ├── README.md               Human-readable documentation
 ├── secrets/                sops-nix encrypted YAML lives here (edit with `sops`)
 ├── .statix.toml            statix linter config (ignores hardware-configuration.nix)
@@ -72,6 +79,10 @@ pentest / bug-bounty rig.
 - `modules/home/hyprland/hyprland.conf` — intentionally unmanaged; edit natively
 - `modules/home/nvim/` — edit Lua files here; they symlink to `~/.config/nvim/`
 - `secrets/*.yaml` — encrypted; use `sops secrets/secrets.yaml` to edit
+- `AGENTS.md`, `.codex/instructions.md` — **symlinks to CLAUDE.md**. Edit
+  CLAUDE.md instead; the symlinks propagate the change to every agent.
+  `modules/home/pi-agent.nix` has an activation hook that recreates
+  `AGENTS.md` if it goes missing.
 
 ---
 

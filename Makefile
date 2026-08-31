@@ -1,12 +1,12 @@
 FLAKE  := /etc/nixos
 HOST   := nixos-hacker-box
 # The # character starts a Make comment, so we use a shell trick to embed it.
-TARGET := .$(shell echo '\#')nixosConfigurations.$(HOST)
+TARGET := path:$(FLAKE)$(shell echo '\#')nixosConfigurations.$(HOST)
 
 NIX_FILES := $(FLAKE)/flake.nix $(FLAKE)/configuration.nix \
              $(shell find $(FLAKE)/modules -name '*.nix' 2>/dev/null)
 
-.PHONY: help switch dry check eval lint dead fmt fmt-check git-add commit update-flake
+.PHONY: help switch dry check eval build lint dead fmt fmt-check git-add commit update-flake
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Default target
@@ -40,11 +40,11 @@ help:
 # Build
 # ──────────────────────────────────────────────────────────────────────────────
 
-switch: git-add
-	sudo nixos-rebuild switch --flake $(FLAKE)\#$(HOST)
+switch: check
+	sudo nixos-rebuild switch --flake path:$(FLAKE)\#$(HOST)
 
-dry: git-add
-	sudo nixos-rebuild dry-activate --flake $(FLAKE)\#$(HOST)
+dry: eval
+	sudo nixos-rebuild dry-activate --flake path:$(FLAKE)\#$(HOST)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # CI / Quality pipeline
@@ -54,7 +54,7 @@ check: eval lint dead build
 	@echo ""
 	@echo "✓ All checks passed — safe to run 'make switch'"
 
-eval: git-add
+eval:
 	@echo "→ Evaluating NixOS configuration..."
 	@nix eval $(TARGET).config.system.build.toplevel --json > /dev/null
 	@echo "✓ eval"
@@ -62,18 +62,18 @@ eval: git-add
 # Actually BUILDS the toplevel derivation (writeShellApplication runs
 # shellcheck + bash -n here). `eval` alone does NOT catch these — many
 # real bugs hide in shell script bodies embedded in Nix.
-build: git-add
+build:
 	@echo "→ Building toplevel derivation (shellcheck, bash -n, …)..."
 	@nix build $(TARGET).config.system.build.toplevel --no-link
 	@echo "✓ build"
 
-lint: git-add
+lint:
 	@echo "→ statix (Nix linter)..."
 	@cd $(FLAKE) && nix run nixpkgs#statix -- check \
 		--ignore hardware-configuration.nix
 	@echo "✓ statix"
 
-dead: git-add
+dead:
 	@echo "→ deadnix (unused bindings)..."
 	@nix run nixpkgs#deadnix -- \
 		--exclude $(FLAKE)/hardware-configuration.nix \

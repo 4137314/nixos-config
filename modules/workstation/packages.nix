@@ -6,8 +6,9 @@
   Audio       EasyEffects (DSP), PavuControl (mixer), Helvum (graph).
   Browser     Firefox.
   Terminal    Kitty (GPU-accelerated, uses Nerd Font glyphs).
-  Wayland     Compositor utilities: Waybar, Hyprlock, Hypridle, Wofi, SWWW,
-              cliphist, wl-clipboard, wl-gammarelay-rs, SwayOSD, ddcutil.
+  Wayland     Core capture/clipboard utilities. Hyprland UI applications are
+              versioned by Home Manager from unstable or dedicated flakes.
+              grim + slurp (screenshots).
   System      Monitoring (btop, htop), file tools (tree), networking (iputils),
               hardware inspection (usbutils, i2c-tools).
   Build       GCC, GNU Make, Binutils, Python 3 (for build scripts/plugins).
@@ -37,16 +38,14 @@
     # Waybar is also HM-managed (modules/home/waybar.nix).
 
     # Wayland / desktop
-    hyprlock
-    hypridle
-    wofi
-    swww
     cliphist
     wl-clipboard
     wl-gammarelay-rs
     swayosd
     libnotify
     ddcutil
+    grim
+    slurp
 
     # System utilities
     git
@@ -89,9 +88,27 @@
 
   virtualisation.docker = {
     enable = true;
+    package = pkgs.docker_29;
     autoPrune = {
       enable = true;
       dates = "weekly";
+    };
+
+    # BuildKit + overlay2 + capped JSON logs.
+    #   features.buildkit  Modern build engine: parallel + cache-mount +
+    #                      secret-mount, big speed win for multi-stage builds.
+    #   log-opts           Cap per-container logs at 3×10 MB — no more
+    #                      runaway logs from a crash-looping container.
+    #   storage-driver     overlay2 is the default; being explicit stops
+    #                      Docker from probing at startup.
+    daemon.settings = {
+      features.buildkit = true;
+      storage-driver = "overlay2";
+      log-driver = "json-file";
+      log-opts = {
+        max-size = "10m";
+        max-file = "3";
+      };
     };
   };
 }

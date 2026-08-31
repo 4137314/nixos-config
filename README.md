@@ -2,7 +2,7 @@
 
 NixOS flake configuration for a high-efficiency workstation + local NAS.
 
-**Stack:** NixOS 25.11 · Hyprland · PipeWire · Samba · Syncthing · Docker · Neovim
+**Stack:** NixOS 25.11 · Hyprland · Zsh/tmux/Kitty · local AI · Docker · Neovim
 
 ---
 
@@ -37,24 +37,34 @@ NixOS flake configuration for a high-efficiency workstation + local NAS.
 
 ## Quick reference
 
-| Alias / command | Description                            |
-| --------------- | -------------------------------------- |
-| `update`        | `nixos-rebuild switch` with this flake |
-| `update-dry`    | Dry-run: show what would change        |
-| `conf`          | Edit `configuration.nix` in Neovim     |
-| `v`             | Neovim                                 |
-| `archive`       | `cd /mnt/archive`                      |
-| `nas-status`    | Status of smbd and syncthing           |
-| `nas-shares`    | Active Samba connections               |
-| `red-alert`     | Set all RGB LEDs to solid red          |
-| `rgb-off`       | Turn off all RGB LEDs                  |
+| Alias / command | Description                          |
+| --------------- | ------------------------------------ |
+| `update`        | Check, build, then switch this flake |
+| `update-dry`    | Dry-run: show what would change      |
+| `conf`          | Edit `configuration.nix` in Neovim   |
+| `v`             | Neovim                               |
+| `archive`       | `cd /mnt/archive`                    |
+| `nas-status`    | Status of smbd and syncthing         |
+| `nas-shares`    | Active Samba connections             |
+| `red-alert`     | Set all RGB LEDs to solid red        |
+| `rgb-off`       | Turn off all RGB LEDs                |
+| `aiq`           | Generate a command with local Ollama |
+| `f`             | Correct the previous failed command  |
+| `cproj`         | Fuzzy-select and enter a Git project |
+| `rgi`           | Ripgrep, preview, then edit a match  |
+| `ndiff`         | Compare the newest NixOS generations |
+| `, <command>`   | Run any indexed nixpkgs command      |
+
+`Ctrl-R` opens Atuin history, `Ctrl-T` selects files, `Alt-C` selects
+directories, `Ctrl-G` opens navi, `Alt-G` selects Git files, and `Alt-E` turns
+a natural-language request into an editable shell command through local Ollama.
 
 ---
 
 ## Development pipeline
 
 ```bash
-make check        # Full CI check: eval + statix lint + deadnix
+make check        # Eval + lint + dead code + complete system build
 make dry          # Dry-activate (preview changes without applying)
 make switch       # Apply configuration to the live system
 make fmt          # Auto-format all .nix files with nixfmt-rfc-style
@@ -63,7 +73,8 @@ make commit       # Stage all and commit
 make update-flake # Bump all flake inputs (nixpkgs, home-manager, …)
 ```
 
-Run `make check` before every `make switch`.
+`make switch` depends on `make check`, so activation cannot accidentally skip
+the validation pipeline. Checks use `path:/etc/nixos` and never stage files.
 
 ---
 
@@ -150,10 +161,10 @@ Every push to `master` triggers two parallel GitHub Actions jobs:
 
 ## Channels
 
-| Input              | Channel                        |
-| ------------------ | ------------------------------ |
-| `nixpkgs`          | `nixos-25.11` (stable)         |
-| `nixpkgs-unstable` | `nixos-unstable` (Neovim only) |
-| `home-manager`     | `release-25.11`                |
+| Input              | Channel                                |
+| ------------------ | -------------------------------------- |
+| `nixpkgs`          | `nixos-25.11` (stable)                 |
+| `nixpkgs-unstable` | `nixos-unstable` (editors and AI CLIs) |
+| `home-manager`     | `release-25.11`                        |
 
 Update all inputs: `make update-flake`

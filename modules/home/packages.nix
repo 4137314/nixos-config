@@ -28,13 +28,40 @@
     lazygit
     jq
 
-    # AI & Claude integration
+    # AI coding CLIs — user-space installs. See:
+    #   modules/home/claude-code.nix  declarative ~/.claude/ config
+    #   modules/home/pi-agent.nix     Pi (multi-model TUI) + Ollama routing
     claude-code
+    codex
 
     # Nix language tooling
     nixd
     nil
     deadnix
     statix
+
+    # Nix ecosystem TUIs.
+    #   nh          modern nixos-rebuild wrapper (`nh os switch`)
+    #   nix-inspect browse the option tree of the live system
+    #   nix-tree    dependency-tree visualiser for a derivation
+    #   nix-diff    compare two derivations
+    #   nix-du      see what's eating space in /nix/store
+    nh
+    nix-inspect
+    nix-tree
+    nix-diff
+    nix-du
+
+    # Modern developer TUIs.
+    #   posting     HTTP client TUI (Postman replacement)
+    #   mprocs      run multiple processes side-by-side in a TUI
+    #   xh          Rust rewrite of httpie
+    #   dive        inspect Docker image layers
+    #   ntfy-sh     CLI for the local ntfy push server (see NTFY_TOPIC hook)
+    posting
+    mprocs
+    xh
+    dive
+    ntfy-sh
   ];
 }

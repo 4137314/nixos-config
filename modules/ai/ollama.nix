@@ -1,39 +1,34 @@
 /*
-  ai/ollama.nix — Local LLM inference server on AMD ROCm.
+  ai/ollama.nix — Local LLM inference server (CPU inference).
 
   Hardware target
   ---------------
-  Ryzen desktop, AMD dGPU with ~8 GB VRAM, 48 GB system RAM.
-  Acceleration set to "rocm" — Ollama offloads as many layers as fit
-  in VRAM, spills the rest to CPU/RAM automatically.
+  Ryzen desktop, RX 470 (gfx803 / GCN 4 Polaris), 48 GB system RAM.
 
-  Model set (Q4_K_M quantisation, sized for the hardware)
-  --------------------------------------------------------
-    llama3.2:3b            fast agent / tool call    (~2 GB, full GPU)
-    qwen2.5:14b            reasoning / summarise     (~9 GB, mostly GPU)
-    qwen2.5-coder:14b      code / Nix / bash         (~9 GB, mostly GPU)
-    deepseek-r1:14b        chain-of-thought          (~9 GB, mostly GPU)
-    nomic-embed-text       fast embeddings           (~300 MB)
-    mxbai-embed-large      accurate embeddings       (~700 MB)
-    llava:13b              vision-language           (~8 GB, mostly GPU)
+  GPU note
+  --------
+  The RX 470 (gfx803) is not supported by the ROCm backend shipped in
+  Ollama 0.21+. Enabling `acceleration = "rocm"` causes a hard crash
+  ("ggml_cuda_compute_forward: RMS_NORM failed — ROCm error: invalid
+  device function") because Ollama's ROCm build no longer includes
+  compiled kernels for gfx803. CPU inference is used instead:
+    - AVX2 + FMA available (confirmed from boot log)
+    - 36+ GB RAM free → 3B–7B Q4_K_M models load and run fine
+    - ~10–20 tok/s on 3B; ~4–8 tok/s on 7B — adequate for agent use
 
-  Speculative decoding (draft model) is configured per-request via
-  Open WebUI or the API — set `draft_model: "llama3.2:3b"` when calling
-  qwen2.5:14b for a ~2-3x tokens/sec speedup with no quality drop.
+  To revisit GPU when upgrading Ollama: test with
+    HSA_OVERRIDE_GFX_VERSION=9.0.0 ROC_ENABLE_PRE_VEGA=1 ollama serve
 
-  Storage
-  -------
-  /var/lib/ollama holds ~40 GB of models. Excluded from restic
-  (rebuildable via `ollama pull`).
+  Model set (Q4_K_M, CPU-sized)
+  ------------------------------
+    llama3.2:3b         fast tool calls / quick answers    (~2 GB)
+    qwen2.5:7b          general reasoning                  (~5 GB)
+    qwen2.5-coder:7b    code / Nix / bash                  (~5 GB)
+    nomic-embed-text    embeddings (RAG, Observatory)      (~300 MB)
 
-  ROCm gotchas
-  ------------
-  If Ollama refuses to see the GPU at first boot, adjust `HSA_OVERRIDE_
-  GFX_VERSION` in the env vars below:
-    RDNA3 (7000-series)  → 11.0.0    (default here)
-    RDNA2 (6000-series)  → 10.3.0
-    RDNA1 (5000-series)  → 10.1.0
-  Also verify `rocminfo` sees the card (rocm-smi shows utilisation).
+  Pull larger models on demand:
+    ollama pull qwen2.5-coder:14b   # ~9 GB, needs ≥10 GB free RAM
+    ollama pull deepseek-r1:8b      # ~5 GB, chain-of-thought
 */
 _: {
   services.ollama = {
@@ -41,8 +36,8 @@ _: {
     host = "127.0.0.1";
     port = 11434;
 
-    # AMD GPU via ROCm.
-    acceleration = "rocm";
+    # CPU inference — gfx803 (RX 470) unsupported by Ollama 0.21 ROCm build.
+    acceleration = null;
 
     environmentVariables = {
       OLLAMA_KEEP_ALIVE = "45m";
@@ -52,23 +47,13 @@ _: {
       OLLAMA_KV_CACHE_TYPE = "q8_0";
       OLLAMA_CONTEXT_LENGTH = "8192";
       OLLAMA_ORIGINS = "https://*.nixos-hacker-box,http://localhost:*";
-
-      # Polaris (RX 470/480/570/580/590 = GCN 4) — ROCm doesn't officially
-      # support it, but with the two env vars below the OpenCL backend
-      # runs. Big models still fall back to CPU; keep loadModels small.
-      HSA_OVERRIDE_GFX_VERSION = "8.0.3";
-      ROC_ENABLE_PRE_VEGA = "1";
-      HIP_VISIBLE_DEVICES = "0";
     };
 
-    # Small model set tuned for CPU-first inference on a Polaris + 48 GB RAM.
-    # Add larger models via `ollama pull qwen2.5:14b` after verifying the
-    # first three work well on this hardware.
     loadModels = [
-      "llama3.2:3b" # ~2 GB, fast, works fully on GPU
-      "qwen2.5:7b" # ~5 GB, reasoning at usable speed
-      "qwen2.5-coder:7b" # ~5 GB, coding helper
-      "nomic-embed-text" # embeddings, tiny
+      "llama3.2:3b"
+      "qwen2.5:7b"
+      "qwen2.5-coder:7b"
+      "nomic-embed-text"
     ];
   };
 }

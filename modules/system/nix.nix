@@ -25,6 +25,14 @@
 */
 _: {
   nix = {
+    # ----------------------------------------------------------------------
+    # Nix daemon runs at idle CPU/IO priority. Interactive workloads stay
+    # snappy even during a `chromium` rebuild or a `make switch` burst.
+    # ----------------------------------------------------------------------
+    daemonCPUSchedPolicy = "idle";
+    daemonIOSchedClass = "idle";
+    daemonIOSchedPriority = 7;
+
     settings = {
       experimental-features = [
         "nix-command"
@@ -44,6 +52,25 @@ _: {
         "root"
         "@wheel"
       ];
+
+      # ------------------------------------------------------------------
+      # Auto-GC when the store gets tight. Nix triggers a GC that frees
+      # (max-free - min-free) bytes whenever the FS has less than min-free
+      # bytes available. Avoids "No space left on device" mid-build.
+      # ------------------------------------------------------------------
+      min-free = 5368709120; # 5 GiB
+      max-free = 21474836480; # 20 GiB
+
+      # ------------------------------------------------------------------
+      # Fetch tuning — bigger download buffer for parallel substituter
+      # pulls, faster failover on unreachable caches, cached negative
+      # lookups so an unavailable narinfo doesn't get re-probed every eval.
+      # ------------------------------------------------------------------
+      download-buffer-size = 524288000; # 500 MiB
+      connect-timeout = 5;
+      builders-use-substitutes = true;
+      narinfo-cache-negative-ttl = 3600;
+      tarball-ttl = 604800; # 7 days for flake tarballs
 
       # Additional community binary cache.
       substituters = [

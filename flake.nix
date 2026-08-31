@@ -4,11 +4,14 @@
   Inputs
   ------
   nixpkgs          Stable channel (25.11) — base system and most packages.
-  nixpkgs-unstable Unstable channel — bleeding-edge packages (Neovim, Zed).
+  nixpkgs-unstable Unstable channel — current desktop tools and editors.
+  hyprland        Hyprland 0.55.4 — compositor pinned to a tested release.
+  hyprexpo        Maintained workspace overview, ABI-aligned with Hyprland.
   home-manager     User environment management, pinned to the stable release.
   sops-nix         Encrypted-at-rest secrets management (age / GPG backed).
   git-hooks        Pre-commit hooks (formatter + lint + smoke tests).
   treefmt-nix      Multi-language formatter driver (Nix / Lua / Shell / …).
+  nix-index-db     Pre-built nixpkgs file index powering `comma`.
 
   Outputs
   -------
@@ -30,6 +33,20 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
 
+    # Keep the compositor and its C++ plugin on the exact same ABI. The
+    # maintained HyprExpo fork also tracks this Hyprland release explicitly.
+    hyprland.url = "github:hyprwm/Hyprland/v0.55.4";
+    hyprexpo = {
+      url = "github:sandwichfarm/hyprexpo";
+      inputs.hyprland.follows = "hyprland";
+    };
+    # The package flake on `master` already targets Hyprland 0.56. Its
+    # v0.55.4 source tag is the compatible implementation for our pin.
+    hyprexpo-source = {
+      url = "github:sandwichfarm/hyprexpo/e76761b268a0ee1747d41e21355fa315797a9bfd";
+      flake = false;
+    };
+
     home-manager = {
       url = "github:nix-community/home-manager/release-25.11";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -47,6 +64,11 @@
 
     treefmt-nix = {
       url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    nix-index-database = {
+      url = "github:nix-community/nix-index-database";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -112,7 +134,7 @@
           };
           statix = {
             enable = true;
-            excludes = [ "hardware-configuration\\.nix" ];
+            settings.ignore = [ "hardware-configuration.nix" ];
           };
           deadnix = {
             enable = true;
@@ -135,8 +157,11 @@
         modules = [
           ./configuration.nix
           sops-nix.nixosModules.sops
+          inputs.nix-index-database.nixosModules.nix-index
           home-manager.nixosModules.home-manager
           {
+            programs.nix-index-database.comma.enable = true;
+
             home-manager = {
               useGlobalPkgs = true;
               useUserPackages = true;
@@ -176,9 +201,20 @@
             git
             gnumake
             jq
+
+            # AI-agent tooling — CLIs and MCP server runtimes.
+            # nodejs_22 exposes `npx` for @modelcontextprotocol/server-*
+            # (filesystem, http), uv exposes `uvx` for mcp-server-git.
+            nodejs_22
+            uv
           ])
           ++ [
             treefmtEval.config.build.wrapper
+            # Coding-agent CLIs pinned to unstable to track upstream releases
+            # closely (matches the "unstable for editors/tools" pattern used
+            # for Neovim). See modules/home/packages.nix for the HM install.
+            unstable.claude-code
+            unstable.codex
           ];
       };
 

@@ -8,7 +8,15 @@
   expose a handful of *modes* that flip the running configuration
   in seconds without a rebuild:
 
+    study                Quiet research/reading mode. Notifications off,
+                         search/research helpers kept available.
     dev      (default)   Everything on. General coding / hacking.
+    hack                 Pentest posture: noisy alerts muted, recon/search
+                         helpers kept available.
+    work                 Practical work mode. Notifications on, noisy
+                         lab builders trimmed back.
+    personal             Personal cloud / media / home mode. Notifications
+                         on, heavier lab builders stopped.
     focus                Notifications silenced, LLM agents paused,
                          browsers stay open — for deep-work sessions.
     night                Warm screen colour, notifications silenced
@@ -16,9 +24,8 @@
     server                AI heavyweights and desktop niceties off,
                          core infra (ssh, tailscale, backups, ollama,
                          nextcloud, forgejo, monitoring) still up.
-    hack                 Pentest posture: hush ntfy so recon output
-                         is not buried under alerts, and warn the
-                         user to enable VPN before scanning.
+    legacy aliases       focus/night/server remain available for existing
+                         muscle memory and scripts.
 
   Implementation
   --------------
@@ -63,10 +70,46 @@ let
   # short user-facing message.
   # --------------------------------------------------------------------------
   modes = {
+    study = {
+      message = "Study mode — quiet desk, research helpers ready.";
+      stop = [ "ntfy-sh.service" ];
+      start = [ "podman-searxng.service" ];
+    };
+
     dev = {
-      message = "Dev mode — everything on.";
+      message = "Dev mode — full workstation online.";
       stop = [ ];
       start = manageableUnits;
+    };
+
+    hack = {
+      message = "Hack mode — alerts muted; bring up VPN before scanning.";
+      stop = [ "ntfy-sh.service" ];
+      start = [
+        "podman-searxng.service"
+        "podman-flowise.service"
+      ];
+    };
+
+    work = {
+      message = "Work mode — notifications on, lab builders quiet.";
+      stop = [
+        "podman-perplexica.service"
+        "podman-flowise.service"
+      ];
+      start = [
+        "ntfy-sh.service"
+        "podman-searxng.service"
+      ];
+    };
+
+    personal = {
+      message = "Personal mode — home services front and centre.";
+      stop = [
+        "podman-perplexica.service"
+        "podman-flowise.service"
+      ];
+      start = [ "ntfy-sh.service" ];
     };
 
     focus = {
@@ -91,10 +134,14 @@ let
       start = [ ];
     };
 
-    hack = {
-      message = "Hack mode — remember to bring up your VPN before scanning.";
+    # Kept as an explicit alias for older scripts; prefer `hack`.
+    recon = {
+      message = "Recon mode — alerts muted; bring up VPN before scanning.";
       stop = [ "ntfy-sh.service" ];
-      start = [ ];
+      start = [
+        "podman-searxng.service"
+        "podman-flowise.service"
+      ];
     };
   };
 
@@ -128,7 +175,7 @@ let
         cat <<'EOF'
       hb-mode — switch workstation persona
       Usage:
-        hb-mode <mode>     Switch to <mode> (dev|focus|night|server|hack)
+        hb-mode <mode>     Switch to <mode> (study|dev|hack|work|personal)
         hb-mode status     Print the currently active mode
         hb-mode list       Print available modes with their descriptions
       EOF

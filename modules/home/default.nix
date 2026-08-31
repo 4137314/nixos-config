@@ -9,6 +9,7 @@
 */
 _: {
   imports = [
+    ./theme.nix
     ./packages.nix
     ./vscode.nix
     ./hyprland.nix
@@ -26,6 +27,7 @@ _: {
     ./wallpaper.nix
     ./zed.nix
     ./pi-agent.nix
+    ./claude-code.nix
   ];
 
   home = {

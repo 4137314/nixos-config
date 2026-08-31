@@ -1,0 +1,6 @@
+# Files aider must never propose edits to (mirrors CLAUDE.md).
+hardware-configuration.nix
+modules/home/hyprland/hyprland.conf
+modules/home/nvim/
+secrets/*.yaml
+flake.lock

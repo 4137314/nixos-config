@@ -51,6 +51,7 @@ _: {
     # System reliability, hardening, and secrets
     ./modules/system/resilience.nix
     ./modules/system/hardening.nix
+    ./modules/system/performance.nix
     ./modules/system/openssh.nix
     ./modules/system/fail2ban.nix
     ./modules/system/secrets.nix

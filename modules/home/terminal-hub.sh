@@ -83,13 +83,13 @@ describe() {
     docs)
       hb-docs report overview 2>/dev/null | sed -n '1,48p'
       ;;
-    window-*|tmux-tree|tmux-new)
+    window-* | tmux-tree | tmux-new)
       printf '%sTMUX COCKPIT%s\n\n' "$magenta" "$reset"
       tmux list-windows -t hb -F \
         '  #{window_index}:#{window_name}  #{pane_current_command}  #{pane_current_path}' \
         2>/dev/null || printf '  tmux session hb non disponibile\n'
       ;;
-    git|editor|search|tasks|project)
+    git | editor | search | tasks | project)
       printf '%sPROJECT%s\n\n' "$magenta" "$reset"
       git status --short --branch 2>/dev/null || printf '  %s non è un repository Git\n' "$PWD"
       printf '\n'
@@ -106,20 +106,20 @@ describe() {
       journalctl --boot --priority=warning..alert --quiet --no-pager \
         --output=short-iso 2>/dev/null | tail -n 30
       ;;
-    processes|kernel|disk)
+    processes | kernel | disk)
       printf '%sHOST PRESSURE%s\n\n' "$magenta" "$reset"
       uptime
       free -h | sed -n '1,2p'
       printf '\n'
       df -h --output=source,size,used,avail,pcent,target / /nix/store 2>/dev/null
       ;;
-    containers|podman|kubernetes)
+    containers | podman | kubernetes)
       printf '%sCONTAINERS%s\n\n' "$magenta" "$reset"
-      podman ps --all --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' 2>/dev/null \
-        | sed -n '1,18p'
+      podman ps --all --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' 2>/dev/null |
+        sed -n '1,18p'
       printf '\n'
-      docker ps --all --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' 2>/dev/null \
-        | sed -n '1,14p'
+      docker ps --all --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' 2>/dev/null |
+        sed -n '1,14p'
       ;;
     net-*)
       printf '%sNETWORK%s\n\n' "$magenta" "$reset"
@@ -128,7 +128,7 @@ describe() {
       ip route show 2>/dev/null
       printf '\nPrivileged capture/flow tools ask for sudo only after selection.\n'
       ;;
-    config-*|flake-update|generation-diff|store|options|garbage)
+    config-* | flake-update | generation-diff | store | options | garbage)
       printf '%sNIXOS%s\n\n' "$magenta" "$reset"
       printf 'current  %s\n' "$(readlink /run/current-system 2>/dev/null || printf 'n/d')"
       printf 'booted   %s\n\n' "$(readlink /run/booted-system 2>/dev/null || printf 'n/d')"
@@ -146,7 +146,7 @@ describe() {
       printf '%sSSH TARGETS%s\n\n' "$magenta" "$reset"
       ssh_hosts | sed -n '1,30p'
       ;;
-    database|database-lazy)
+    database | database-lazy)
       printf '%sDATABASE%s\n\n' "$magenta" "$reset"
       printf 'rainfrog  fast SQL query/explorer TUI\n'
       printf 'lazysql   multi-engine database administration TUI\n\n'
@@ -243,28 +243,28 @@ confirm_garbage() {
 
 pick_mode() {
   local choice mode
-  choice=$(/run/current-system/sw/bin/hb-mode list 2>/dev/null \
-    | sed 's/^  //' \
-    | fzf --height=100% --layout=reverse --border=sharp \
-        --prompt='hb-mode › ') || return
+  choice=$(/run/current-system/sw/bin/hb-mode list 2>/dev/null |
+    sed 's/^  //' |
+    fzf --height=100% --layout=reverse --border=sharp \
+      --prompt='hb-mode › ') || return
   mode=$(awk '{print $1}' <<<"$choice")
   [ -n "$mode" ] && /run/current-system/sw/bin/hb-mode "$mode"
 }
 
 pick_interface() {
-  ip -o link show 2>/dev/null \
-    | awk -F': ' '$2 != "lo" {sub(/@.*/, "", $2); print $2}' \
-    | sort -u \
-    | fzf --height=100% --layout=reverse --border=sharp --prompt='interface › '
+  ip -o link show 2>/dev/null |
+    awk -F': ' '$2 != "lo" {sub(/@.*/, "", $2); print $2}' |
+    sort -u |
+    fzf --height=100% --layout=reverse --border=sharp --prompt='interface › '
 }
 
 ssh_hosts() {
   rg --no-filename '^[[:space:]]*Host[[:space:]]+' \
-    "$HOME/.ssh/config" "$HOME/.ssh/config.d" 2>/dev/null \
-    | sed -E 's/^[[:space:]]*Host[[:space:]]+//' \
-    | tr ' ' '\n' \
-    | rg -v '[*?!]' \
-    | sort -u
+    "$HOME/.ssh/config" "$HOME/.ssh/config.d" 2>/dev/null |
+    sed -E 's/^[[:space:]]*Host[[:space:]]+//' |
+    tr ' ' '\n' |
+    rg -v '[*?!]' |
+    sort -u
 }
 
 pick_ssh() {
@@ -277,12 +277,12 @@ pick_ssh() {
 pick_project() {
   local project
   project=$(fd --hidden --type d '^\.git$' --max-depth 7 "$HOME" /etc/nixos \
-    2>/dev/null \
-    | sed -E 's#/.git/?$##' \
-    | sort -u \
-    | fzf --height=100% --layout=reverse --border=sharp \
-        --prompt='project › ' \
-        --preview='git -C {} status --short --branch 2>/dev/null; git -C {} --no-pager log --oneline -8 2>/dev/null') || return
+    2>/dev/null |
+    sed -E 's#/.git/?$##' |
+    sort -u |
+    fzf --height=100% --layout=reverse --border=sharp \
+      --prompt='project › ' \
+      --preview='git -C {} status --short --branch 2>/dev/null; git -C {} --no-pager log --oneline -8 2>/dev/null') || return
   [ -n "$project" ] || return
 
   if [ -n "${TMUX:-}" ]; then
@@ -360,14 +360,14 @@ run_action() {
 
 main_menu() {
   local selection key
-  selection=$(menu_items \
-    | fzf --height=100% --layout=reverse --border=sharp --ansi \
-        --delimiter=$'\t' --with-nth=2 \
-        --prompt='terminal os › ' \
-        --header='Invio: launch · type: filter · Esc: close · mutating actions confirm' \
-        --preview="HB_TERM_PREVIEW=1 $self preview {1}" \
-        --preview-window='right,62%,wrap' \
-        --bind='ctrl-r:refresh-preview') || return 0
+  selection=$(menu_items |
+    fzf --height=100% --layout=reverse --border=sharp --ansi \
+      --delimiter=$'\t' --with-nth=2 \
+      --prompt='terminal os › ' \
+      --header='Invio: launch · type: filter · Esc: close · mutating actions confirm' \
+      --preview="HB_TERM_PREVIEW=1 $self preview {1}" \
+      --preview-window='right,62%,wrap' \
+      --bind='ctrl-r:refresh-preview') || return 0
   key=$(cut -f1 <<<"$selection")
   [ -n "$key" ] && run_action "$key"
 }

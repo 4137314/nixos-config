@@ -284,7 +284,7 @@ tldr_browser() {
 
 run_action() {
   case "$1" in
-    overview|architecture|tmux|hyprland|pi|shell|history|help) paged_report "$1" ;;
+    overview | architecture | tmux | hyprland | pi | shell | history | help) paged_report "$1" ;;
     readme) glow -p "$repo/README.md" ;;
     modules) module_browser ;;
     options) option_browser ;;

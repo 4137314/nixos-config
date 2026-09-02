@@ -16,10 +16,10 @@ if [ -r "$cache_file" ] && [ $((now - mtime)) -lt 5 ]; then
   exit 0
 fi
 
-failed_system=$(systemctl --failed --no-legend --plain 2>/dev/null \
-  | awk 'NF { count++ } END { print count + 0 }')
-failed_user=$(systemctl --user --failed --no-legend --plain 2>/dev/null \
-  | awk 'NF { count++ } END { print count + 0 }')
+failed_system=$(systemctl --failed --no-legend --plain 2>/dev/null |
+  awk 'NF { count++ } END { print count + 0 }')
+failed_user=$(systemctl --user --failed --no-legend --plain 2>/dev/null |
+  awk 'NF { count++ } END { print count + 0 }')
 failed=$((failed_system + failed_user))
 
 payload=$(curl --fail --silent --max-time 1 --get \

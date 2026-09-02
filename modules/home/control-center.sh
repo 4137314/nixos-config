@@ -78,7 +78,7 @@ unit_line() {
         marker="×"
         tone=$red
         ;;
-      activating|deactivating|reloading)
+      activating | deactivating | reloading)
         marker="◐"
         tone=$yellow
         ;;
@@ -119,8 +119,8 @@ failed_count() {
   if [ "$scope" = "user" ]; then
     ctl+=(--user)
   fi
-  "${ctl[@]}" --failed --no-legend --plain 2>/dev/null \
-    | awk 'NF { count++ } END { print count + 0 }'
+  "${ctl[@]}" --failed --no-legend --plain 2>/dev/null |
+    awk 'NF { count++ } END { print count + 0 }'
 }
 
 alert_count() {
@@ -246,11 +246,11 @@ report_alerts() {
     else
       jq -r '.data.result[] |
         [.metric.alertstate, .metric.alertname, (.metric.instance // "-"),
-         (.metric.severity // "-")] | @tsv' <<<"$payload" \
-        | while IFS=$'\t' read -r alert_state name instance severity; do
-            printf '  %s%-8s%s %-28s %-10s %s\n' \
-              "$red" "$alert_state" "$reset" "$name" "$severity" "$instance"
-          done
+         (.metric.severity // "-")] | @tsv' <<<"$payload" |
+        while IFS=$'\t' read -r alert_state name instance severity; do
+          printf '  %s%-8s%s %-28s %-10s %s\n' \
+            "$red" "$alert_state" "$reset" "$name" "$severity" "$instance"
+        done
     fi
   fi
 
@@ -261,15 +261,15 @@ report_alerts() {
   else
     jq -r '.data.result[] |
       [(.value[1] // "0"), (.metric.instance // .metric.target // "?")] | @tsv' \
-      <<<"$probes" \
-      | sort -k2 \
-      | while IFS=$'\t' read -r value instance; do
-          if [ "$value" = "1" ]; then
-            printf '  %s●%s %s\n' "$green" "$reset" "$instance"
-          else
-            printf '  %s×%s %s\n' "$red" "$reset" "$instance"
-          fi
-        done
+      <<<"$probes" |
+      sort -k2 |
+      while IFS=$'\t' read -r value instance; do
+        if [ "$value" = "1" ]; then
+          printf '  %s●%s %s\n' "$green" "$reset" "$instance"
+        else
+          printf '  %s×%s %s\n' "$red" "$reset" "$instance"
+        fi
+      done
   fi
 
   section "ULTIME NOTIFICHE LOCALI"
@@ -301,9 +301,9 @@ report_log_summary() {
   title "$label"
   section "CONTEGGIO PER UNITÀ"
   journalctl "${boot_arg[@]}" --priority=warning..alert --quiet --no-pager \
-    --output=json 2>/dev/null \
-    | jq -r '._SYSTEMD_UNIT // .SYSLOG_IDENTIFIER // "kernel/other"' \
-    | sort | uniq -c | sort -nr | sed -n '1,16p'
+    --output=json 2>/dev/null |
+    jq -r '._SYSTEMD_UNIT // .SYSLOG_IDENTIFIER // "kernel/other"' |
+    sort | uniq -c | sort -nr | sed -n '1,16p'
 
   section "EVENTI PIÙ RECENTI"
   journalctl "${boot_arg[@]}" --priority=warning..alert --quiet --no-pager \
@@ -345,9 +345,9 @@ report_config() {
   nixos-rebuild list-generations 2>/dev/null | sed -n '1,13p'
 
   section "MODULI ATTIVI"
-  rg '^[[:space:]]*\./modules/' /etc/nixos/configuration.nix 2>/dev/null \
-    | sed -E 's/^[[:space:]]*//; s/[[:space:]]*#.*$//' \
-    | sed -n '1,60p'
+  rg '^[[:space:]]*\./modules/' /etc/nixos/configuration.nix 2>/dev/null |
+    sed -E 's/^[[:space:]]*//; s/[[:space:]]*#.*$//' |
+    sed -n '1,60p'
 }
 
 report_generation() {
@@ -392,11 +392,11 @@ report_storage() {
 report_containers() {
   title "CONTAINERS / VIRTUALISATION"
   section "PODMAN"
-  podman ps --all --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' 2>/dev/null \
-    | sed -n '1,28p'
+  podman ps --all --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' 2>/dev/null |
+    sed -n '1,28p'
   section "DOCKER"
-  docker ps --all --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' 2>/dev/null \
-    | sed -n '1,22p'
+  docker ps --all --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' 2>/dev/null |
+    sed -n '1,22p'
   section "LIBVIRT"
   virsh --connect qemu:///system list --all 2>/dev/null
   section "UNITÀ CONTAINER FALLITE"
@@ -408,14 +408,14 @@ report_agents() {
   section "HB MODE"
   /run/current-system/sw/bin/hb-mode status 2>/dev/null || printf '  sconosciuto\n'
   section "TIMER AGENTI"
-  systemctl list-timers --all --no-pager --plain 'agent-*' 'obs-*' 2>/dev/null \
-    | sed -n '1,35p'
+  systemctl list-timers --all --no-pager --plain 'agent-*' 'obs-*' 2>/dev/null |
+    sed -n '1,35p'
   section "UNITÀ FALLITE"
   systemctl --failed --no-pager --plain 'agent-*' 'obs-*' 2>/dev/null
   section "ULTIMI EVENTI OBSERVATORY"
   if [ -r /var/lib/observatory/events.jsonl ]; then
-    tail -n 24 /var/lib/observatory/events.jsonl 2>/dev/null \
-      | jq -r '[.ts // .time // "", .source // .producer // "",
+    tail -n 24 /var/lib/observatory/events.jsonl 2>/dev/null |
+      jq -r '[.ts // .time // "", .source // .producer // "",
         .type // .event // ""] | @tsv' 2>/dev/null
   else
     printf '  event store non leggibile o ancora vuoto\n'
@@ -475,7 +475,7 @@ report() {
   case "$1" in
     hub) hb-term help ;;
     overview) report_overview ;;
-    health|services) report_health ;;
+    health | services) report_health ;;
     alerts) report_alerts ;;
     important) report_log_summary important ;;
     boot) report_log_summary boot ;;
@@ -488,11 +488,11 @@ report() {
     generation) report_generation ;;
     network) report_network ;;
     storage) report_storage ;;
-    containers|container-tui) report_containers ;;
+    containers | container-tui) report_containers ;;
     agents) report_agents ;;
     security) report_security ;;
     processes) report_processes ;;
-    help|*) report_help ;;
+    help | *) report_help ;;
   esac
 }
 
@@ -558,17 +558,17 @@ choose_unit_logs() {
   local choice scope unit
   choice=$(
     {
-      systemctl list-units --type=service --all --no-legend --plain 2>/dev/null \
-        | awk '{print "system\t" $1}'
-      systemctl --user list-units --type=service --all --no-legend --plain 2>/dev/null \
-        | awk '{print "user\t" $1}'
-    } | sort -u \
-      | fzf --height=100% --layout=reverse --border=sharp --ansi \
-          --delimiter=$'\t' --with-nth=1,2 \
-          --prompt='unit logs › ' \
-          --header='Invio: journal 7d in lnav · Esc: indietro' \
-          --preview="HB_CC_COLOR=1 $self unit-preview {1} {2}" \
-          --preview-window='right,65%,wrap'
+      systemctl list-units --type=service --all --no-legend --plain 2>/dev/null |
+        awk '{print "system\t" $1}'
+      systemctl --user list-units --type=service --all --no-legend --plain 2>/dev/null |
+        awk '{print "user\t" $1}'
+    } | sort -u |
+      fzf --height=100% --layout=reverse --border=sharp --ansi \
+        --delimiter=$'\t' --with-nth=1,2 \
+        --prompt='unit logs › ' \
+        --header='Invio: journal 7d in lnav · Esc: indietro' \
+        --preview="HB_CC_COLOR=1 $self unit-preview {1} {2}" \
+        --preview-window='right,65%,wrap'
   ) || true
 
   [ -n "$choice" ] || return
@@ -586,10 +586,10 @@ choose_failed_unit() {
   local choice scope unit candidates
   candidates=$(
     {
-      systemctl --failed --no-legend --plain 2>/dev/null \
-        | awk 'NF {print "system\t" $1}'
-      systemctl --user --failed --no-legend --plain 2>/dev/null \
-        | awk 'NF {print "user\t" $1}'
+      systemctl --failed --no-legend --plain 2>/dev/null |
+        awk 'NF {print "system\t" $1}'
+      systemctl --user --failed --no-legend --plain 2>/dev/null |
+        awk 'NF {print "user\t" $1}'
     } | sort -u
   )
 
@@ -601,11 +601,11 @@ choose_failed_unit() {
     return
   fi
 
-  choice=$(printf '%s\n' "$candidates" \
-    | fzf --height=100% --layout=reverse --border=sharp --ansi \
-        --delimiter=$'\t' --with-nth=1,2 --prompt='failed › ' \
-        --preview="HB_CC_COLOR=1 $self unit-preview {1} {2}" \
-        --preview-window='right,65%,wrap') || true
+  choice=$(printf '%s\n' "$candidates" |
+    fzf --height=100% --layout=reverse --border=sharp --ansi \
+      --delimiter=$'\t' --with-nth=1,2 --prompt='failed › ' \
+      --preview="HB_CC_COLOR=1 $self unit-preview {1} {2}" \
+      --preview-window='right,65%,wrap') || true
   [ -n "$choice" ] || return
   IFS=$'\t' read -r scope unit <<<"$choice"
 
@@ -653,13 +653,13 @@ run_action() {
     overview) watch_report overview 5 ;;
     health) paged_report health ;;
     alerts) watch_report alerts 10 ;;
-    important|boot|previous|live) open_log_view "$1" ;;
+    important | boot | previous | live) open_log_view "$1" ;;
     unit) choose_unit_logs ;;
     failed) choose_failed_unit ;;
     services) systemctl-tui ;;
-    timers|config) paged_report "$1" ;;
+    timers | config) paged_report "$1" ;;
     generation) nvd diff /run/booted-system /run/current-system | less -R ;;
-    network|storage|containers|agents|security) watch_report "$1" 5 ;;
+    network | storage | containers | agents | security) watch_report "$1" 5 ;;
     container-tui) lazydocker ;;
     processes) btop ;;
     help) paged_report help ;;
@@ -674,14 +674,14 @@ main_menu() {
   fi
 
   while true; do
-    selection=$(menu_items \
-      | fzf --height=100% --layout=reverse --border=sharp --ansi \
-          --delimiter=$'\t' --with-nth=2 \
-          --prompt='control › ' \
-          --header="$menu_header" \
-          --preview="HB_CC_COLOR=1 $self preview {1}" \
-          --preview-window='right,68%,wrap' \
-          --bind='ctrl-r:refresh-preview') || true
+    selection=$(menu_items |
+      fzf --height=100% --layout=reverse --border=sharp --ansi \
+        --delimiter=$'\t' --with-nth=2 \
+        --prompt='control › ' \
+        --header="$menu_header" \
+        --preview="HB_CC_COLOR=1 $self preview {1}" \
+        --preview-window='right,68%,wrap' \
+        --bind='ctrl-r:refresh-preview') || true
 
     [ -n "$selection" ] || return 0
     key=$(cut -f1 <<<"$selection")
@@ -702,7 +702,7 @@ persistent_pane() {
 }
 
 case "${1:-menu}" in
-  preview|report)
+  preview | report)
     report "${2:-help}"
     ;;
   unit-preview)

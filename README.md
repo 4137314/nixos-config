@@ -54,9 +54,9 @@ NixOS flake configuration for a high-efficiency workstation + local NAS.
 | `rgi`               | Ripgrep, preview, then edit a match  |
 | `ndiff`             | Compare the newest NixOS generations |
 | `, <command>`       | Run any indexed nixpkgs command      |
-| `hb-term`           | Open the terminal command palette     |
-| `hb-control-center` | Open the central operations TUI       |
-| `hb-docs` / `docs`  | Open live documentation and keymaps   |
+| `hb-term`           | Open the terminal command palette    |
+| `hb-control-center` | Open the central operations TUI      |
+| `hb-docs` / `docs`  | Open live documentation and keymaps  |
 
 `Ctrl-R` opens Atuin history, `Ctrl-T` selects files, `Alt-C` selects
 directories, `Ctrl-G` opens navi, `Alt-G` selects Git files, and `Alt-E` turns
@@ -83,23 +83,23 @@ and garbage collection require an explicit confirmation. The same palette opens
 from any pane with `Ctrl-a Space`; the aliases `hub` and `control` open the
 palette and the observation dashboard respectively.
 
-| tmux key       | Action                                             |
-| -------------- | -------------------------------------------------- |
-| `Ctrl-a Space` | Complete terminal/TUI command palette              |
-| `Ctrl-a I`     | Control centre popup                               |
-| `Ctrl-a i`     | Persistent live documentation window               |
-| `Ctrl-a p`     | Persistent Pi Coding Agent workspace               |
-| `Ctrl-a C-p`   | Pi popup rooted in the current project             |
-| `Ctrl-a o`     | SessionX project/session/window manager            |
-| `Ctrl-a m`     | Contextual command menu                            |
-| `Ctrl-a F`     | Fuzzy session/window/pane/process manager          |
+| tmux key       | Action                                              |
+| -------------- | --------------------------------------------------- |
+| `Ctrl-a Space` | Complete terminal/TUI command palette               |
+| `Ctrl-a I`     | Control centre popup                                |
+| `Ctrl-a i`     | Persistent live documentation window                |
+| `Ctrl-a p`     | Persistent Pi Coding Agent workspace                |
+| `Ctrl-a C-p`   | Pi popup rooted in the current project              |
+| `Ctrl-a o`     | SessionX project/session/window manager             |
+| `Ctrl-a m`     | Contextual command menu                             |
+| `Ctrl-a F`     | Fuzzy session/window/pane/process manager           |
 | `Ctrl-a Tab`   | Extract and copy/insert visible paths, URLs, hashes |
-| `Ctrl-a T`     | Vimium-style token hints                           |
-| `Ctrl-a u`     | Fuzzy-open a URL from pane history                 |
-| `Ctrl-a n`     | Jump to the permanent NixOS workspace              |
-| `Ctrl-a ?`     | Cockpit keymap                                     |
-| `Ctrl-a y`     | Toggle synchronized input across panes             |
-| `Ctrl-a P`     | Toggle persistent logging for the current pane     |
+| `Ctrl-a T`     | Vimium-style token hints                            |
+| `Ctrl-a u`     | Fuzzy-open a URL from pane history                  |
+| `Ctrl-a n`     | Jump to the permanent NixOS workspace               |
+| `Ctrl-a ?`     | Cockpit keymap                                      |
+| `Ctrl-a y`     | Toggle synchronized input across panes              |
+| `Ctrl-a P`     | Toggle persistent logging for the current pane      |
 | `Ctrl-a Alt-p` | Capture the visible pane as text                    |
 
 The tmux status line exposes mode, CPU, RAM, failed units, Prometheus alerts and

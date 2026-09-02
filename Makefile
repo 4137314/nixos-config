@@ -6,7 +6,7 @@ TARGET := path:$(FLAKE)$(shell echo '\#')nixosConfigurations.$(HOST)
 NIX_FILES := $(FLAKE)/flake.nix $(FLAKE)/configuration.nix \
              $(shell find $(FLAKE)/modules -name '*.nix' 2>/dev/null)
 
-.PHONY: help switch dry check eval build lint dead fmt fmt-check git-add commit update-flake
+.PHONY: help switch dry check flake-check eval build lint dead fmt fmt-check git-add commit update-flake
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Default target
@@ -20,7 +20,8 @@ help:
 	@echo "    dry           Dry-activate (preview without applying)"
 	@echo ""
 	@echo "  CI / Quality"
-	@echo "    check         Full pipeline: eval + lint + dead-code check"
+	@echo "    check         Full pipeline: flake checks + eval + lint + build"
+	@echo "    flake-check   Run every check declared by flake.nix"
 	@echo "    eval          Evaluate the NixOS config (no build)"
 	@echo "    lint          Run statix (Nix anti-pattern linter)"
 	@echo "    dead          Run deadnix (unused binding detector)"
@@ -50,9 +51,14 @@ dry: eval
 # CI / Quality pipeline
 # ──────────────────────────────────────────────────────────────────────────────
 
-check: eval lint dead build
+check: flake-check eval lint dead build
 	@echo ""
 	@echo "✓ All checks passed — safe to run 'make switch'"
+
+flake-check:
+	@echo "→ Running flake checks (format, YAML, secrets, hooks…)..."
+	@nix flake check
+	@echo "✓ flake check"
 
 eval:
 	@echo "→ Evaluating NixOS configuration..."

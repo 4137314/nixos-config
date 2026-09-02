@@ -35,8 +35,11 @@ jobs:
       - name: Enable magic Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@v14
 
-      - name: nix flake check (structure)
-        run: nix flake check --no-build
+      # Hyprland's flake reads VERSION from a fileset-backed source derivation.
+      # A fresh runner must be allowed to realise that tiny source; --no-build
+      # makes evaluation depend accidentally on whether it is already cached.
+      - name: nix flake check
+        run: nix flake check
 
       - name: Evaluate NixOS configuration
         # Forces full module evaluation — catches type errors and option conflicts.

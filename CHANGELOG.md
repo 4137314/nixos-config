@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.0](https://github.com/4137314/nixos-config/compare/v0.1.1...v0.2.0) (2026-08-31)
+
+
+### ✨ Features
+
+* **home:** install pi coding agent wired to local Ollama ([#52](https://github.com/4137314/nixos-config/issues/52)) ([fa294cc](https://github.com/4137314/nixos-config/commit/fa294ccf9b628f12c9a68cd2a2ea3238585c8ad4))
+* **nixos:** integrate terminal and AI workflows ([3c2fd0c](https://github.com/4137314/nixos-config/commit/3c2fd0c383e10b42a8813f5f5c6a021b1bc0b954))
+
+
+### 🐛 Bug fixes
+
+* **waybar:** show workspace numbers on the active workspace ([#51](https://github.com/4137314/nixos-config/issues/51)) ([7195062](https://github.com/4137314/nixos-config/commit/7195062ea1325a0a184f39a346a5752862eed19c))
+
 ## [0.1.1](https://github.com/4137314/nixos-config/compare/v0.1.0...v0.1.1) (2026-08-19)
 
 ### 👷 CI / tooling

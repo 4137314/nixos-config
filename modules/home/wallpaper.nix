@@ -117,7 +117,7 @@ let
             <tspan x="1514" dy="34">|  super+o  ops deck      super+n  net deck        |</tspan>
             <tspan x="1514" dy="34">|  super+x  security      super+space key layout   |</tspan>
             <tspan x="1514" dy="34">|  super+i  infra         super+a audit/logs       |</tspan>
-            <tspan x="1514" dy="34">|  super+u  lab           click spine widgets      |</tspan>
+            <tspan x="1514" dy="34">|  super+u  lab           click top bar profiles   |</tspan>
             <tspan x="1514" dy="34">|  super+h/j/k/l focus    super+g screen grab      |</tspan>
             <tspan x="1514" dy="34">+--------------------------------------------------+</tspan>
           </text>

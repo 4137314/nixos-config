@@ -493,9 +493,64 @@ let
     Diagnose local service health without changing state. Return the likely
     cause, concrete evidence, and the smallest safe next command.
   '';
+
+  piWorkspace = pkgs.writeShellApplication {
+    name = "hb-pi-workspace";
+    runtimeInputs = with pkgs; [
+      bash
+      coreutils
+      tmux
+    ];
+    text = ''
+      pi_bin="${piBin}/pi"
+      mode="fresh"
+      trap ':' INT QUIT
+
+      cd /etc/nixos
+      while true; do
+        clear
+        if [ ! -x "$pi_bin" ]; then
+          printf '%s\n\n' \
+            'PI CODING AGENT IS NOT INSTALLED YET' \
+            'Run make switch, then this permanent workspace will recover automatically.'
+          sleep 5
+          continue
+        fi
+
+        args=(--agent hacker-box --name hb-cockpit)
+        case "$mode" in
+          continue) args+=(--continue) ;;
+          resume) args+=(--resume) ;;
+        esac
+
+        status=0
+        "$pi_bin" "''${args[@]}" || status=$?
+        printf '\n\033[36mPI WORKSPACE\033[0m exited with status %s\n' "$status"
+        printf '[r] restart  [c] continue last  [s] session picker  [d] docs  [q] shell window\n'
+        action=""
+        IFS= read -r -n 1 action || true
+        printf '\n'
+
+        case "$action" in
+          c) mode="continue" ;;
+          s) mode="resume" ;;
+          d)
+            [ -n "''${TMUX:-}" ] && tmux select-window -t hb:docs 2>/dev/null || true
+            mode="continue"
+            ;;
+          q)
+            [ -n "''${TMUX:-}" ] && tmux select-window -t hb:shell 2>/dev/null || true
+            mode="continue"
+            ;;
+          *) mode="fresh" ;;
+        esac
+      done
+    '';
+  };
 in
 {
   home = {
+    packages = [ piWorkspace ];
     sessionPath = [ piBin ];
 
     sessionVariables = {

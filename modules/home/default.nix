@@ -17,6 +17,9 @@ _: {
     ./git.nix
     ./bash.nix
     ./tmux.nix
+    ./docs-center.nix
+    ./terminal-hub.nix
+    ./control-center.nix
     ./ssh.nix
     ./cli-tools.nix
     ./kitty.nix

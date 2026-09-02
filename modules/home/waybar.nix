@@ -1,12 +1,17 @@
 /*
   home/waybar.nix — Waybar status bar (cyberpunk hacker theme).
 
-  Layout
-  ------
-  mainBar  left workspaces · center window · right live desktop state
-  opsBar   compact fixed-width security mesh · LAN/uptime/UTC
-  spine    narrow service-state rail for persistent infrastructure signals
-  hud      square launcher tiles, including the pull-up Pi agent console
+  One top bar, five runtime layouts
+  ---------------------------------
+  main    workspaces · focused window · live desktop state
+  ops     security mesh · LAN · sessions · uptime · UTC
+  infra   NixOS state · services · storage · virtualisation
+  intel   optional weather, market and Hacker News feeds
+  launch  operator controls · Pi · agents · configuration intelligence
+
+  `waybar-layout <main|ops|infra|intel|launch>` switches the composition.
+  Only one Waybar surface runs at a time and every layout stays on the top
+  edge, so the former lower bar and lateral rails consume no screen space.
 
   Tickers  (toggle-able from `myTheme.banners.*.enable`)
   --------
@@ -34,7 +39,7 @@ let
   t = config.myTheme;
   b = t.banners;
   w = t.widgets;
-  inherit (t.bars) ops spine hud;
+  bar = t.bars.command;
   piBinary = "${config.home.homeDirectory}/.local/pi/node_modules/.bin/pi";
 
   hexByte =
@@ -48,9 +53,9 @@ let
   cssHex = lib.id;
 
   isBannerEnabled = banner: b.enable && banner.enable;
-  isOpsWidgetEnabled = widget: ops.enable && widget.enable;
-  isSpineWidgetEnabled = widget: spine.enable && widget.enable;
-  isHudWidgetEnabled = widget: hud.enable && widget.enable;
+  isOpsWidgetEnabled = widget: widget.enable;
+  isSpineWidgetEnabled = widget: widget.enable;
+  isHudWidgetEnabled = widget: widget.enable;
 
   enabledBannerNames =
     (lib.optional (isBannerEnabled b.crypto) "crypto")
@@ -85,17 +90,6 @@ let
     ++ (lib.optional (isHudWidgetEnabled w.agentIntel) "agents")
     ++ (lib.optional (isHudWidgetEnabled w.serviceIntel) "services");
   hudWidgetNamesText = lib.concatStringsSep " " hudWidgetNames;
-
-  hudWidgetSignals = [
-    13
-    14
-    15
-    16
-    17
-    18
-    19
-  ];
-  hudWidgetSignalsText = lib.concatMapStringsSep " " toString hudWidgetSignals;
 
   hudPrelude = name: ''
     state_dir="''${XDG_RUNTIME_DIR:-/tmp}/waybar-widgets"
@@ -176,72 +170,24 @@ let
 
   widgetVisibilityScript = pkgs.writeShellApplication {
     name = "waybar-widget-visibility";
-    runtimeInputs = with pkgs; [
-      coreutils
-      procps
+    runtimeInputs = [
+      layoutCommand
+      pkgs.coreutils
     ];
     text = ''
+      # Compatibility for the existing immutable Hyprland key bindings.
       state_dir="''${XDG_RUNTIME_DIR:-/tmp}/waybar-widgets"
-      mkdir -p "$state_dir"
+      rm -f "$state_dir"/*.hidden 2>/dev/null || true
 
-      refresh_waybar() {
-        for signal in ${hudWidgetSignalsText}; do
-          pkill "-RTMIN+$signal" waybar >/dev/null 2>&1 || true
-        done
-      }
-
-      action="''${1:-status}"
-      shift || true
-      names="$*"
-      [ -n "$names" ] || names="${hudWidgetNamesText}"
-      read -r -a widget_names <<< "$names"
-
-      all_hidden() {
-        for name in "''${widget_names[@]}"; do
-          [ -e "$state_dir/$name.hidden" ] || return 1
-        done
-        return 0
-      }
-
-      case "$action" in
-        hide)
-          for name in "''${widget_names[@]}"; do
-            touch "$state_dir/$name.hidden"
-          done
-          ;;
-        show)
-          for name in "''${widget_names[@]}"; do
-            rm -f "$state_dir/$name.hidden"
-          done
-          rm -f "$state_dir/all.hidden"
-          ;;
-        toggle)
-          for name in "''${widget_names[@]}"; do
-            if [ -e "$state_dir/$name.hidden" ]; then
-              rm -f "$state_dir/$name.hidden"
-            else
-              touch "$state_dir/$name.hidden"
-            fi
-          done
-          ;;
-        toggle-all)
-          if all_hidden; then
-            for name in "''${widget_names[@]}"; do
-              rm -f "$state_dir/$name.hidden"
-            done
-            rm -f "$state_dir/all.hidden"
-          else
-            for name in "''${widget_names[@]}"; do
-              touch "$state_dir/$name.hidden"
-            done
-          fi
-          ;;
+      case "''${1:-status}" in
+        toggle|toggle-all) waybar-layout toggle-launch ;;
+        show) waybar-layout launch ;;
+        hide) waybar-layout main ;;
+        status) waybar-layout status ;;
+        *) waybar-layout --help ;;
       esac
-
-      refresh_waybar
     '';
   };
-
   bannerStatusScript = pkgs.writeShellApplication {
     name = "waybar-banner-status";
     runtimeInputs = with pkgs; [
@@ -334,7 +280,7 @@ let
     esac
 
     modes=$(/run/current-system/sw/bin/hb-mode list 2>/dev/null | sed -n '1,12p' || true)
-    tooltip=$(printf 'mode: %s\n%s\n\nleft: cycle configured modes\nright: command center' "$mode" "$role")
+    tooltip=$(printf 'mode: %s\n%s\n\nleft: cycle configured modes\nright: mode picker (wofi)' "$mode" "$role")
     [ -n "$modes" ] && tooltip="$tooltip\n\n$modes"
 
     jq -cn --arg text "$text" --arg tooltip "$tooltip" --arg class "$cls" --arg alt "$mode" \
@@ -1396,14 +1342,13 @@ let
     "hyprland/submap"
   ];
 
-  hudModules = [
-    "custom/hud-toggle"
-  ]
-  ++ (lib.optional (isHudWidgetEnabled w.pi) "custom/hud-pi")
-  ++ (lib.optional (isHudWidgetEnabled w.news) "custom/hud-news")
-  ++ (lib.optional (isHudWidgetEnabled w.configIntel) "custom/hud-config")
-  ++ (lib.optional (isHudWidgetEnabled w.agentIntel) "custom/hud-agents")
-  ++ (lib.optional (isHudWidgetEnabled w.serviceIntel) "custom/hud-services");
+  launchModules =
+    (lib.optional (isHudWidgetEnabled w.mode) "custom/hud-mode")
+    ++ (lib.optional (isHudWidgetEnabled w.pi) "custom/hud-pi")
+    ++ (lib.optional (isHudWidgetEnabled w.news) "custom/hud-news")
+    ++ (lib.optional (isHudWidgetEnabled w.configIntel) "custom/hud-config")
+    ++ (lib.optional (isHudWidgetEnabled w.agentIntel) "custom/hud-agents")
+    ++ (lib.optional (isHudWidgetEnabled w.serviceIntel) "custom/hud-services");
 
   opsLeftModules = [
     "custom/operator"
@@ -1416,12 +1361,11 @@ let
   ++ (lib.optional (isOpsWidgetEnabled w.tor) "custom/tor")
   ++ (lib.optional (isOpsWidgetEnabled w.matrix) "custom/matrix")
   ++ (lib.optional (isOpsWidgetEnabled w.keyboard) "custom/keyboard");
-  opsCenterModules = [ ];
   opsRightModules =
     (lib.optional (isOpsWidgetEnabled w.localIp) "custom/local-ip")
     ++ (lib.optional (isOpsWidgetEnabled w.uptime) "custom/uptime")
     ++ [
-      "clock"
+      "clock#utc"
     ];
 
   spineTopModules =
@@ -1451,7 +1395,7 @@ let
         tooltip = true;
         signal = 13;
         on-click = "hb-mode-cycle";
-        on-click-right = "hb-command-center";
+        on-click-right = "hb-mode-pick";
       };
     }
     // lib.optionalAttrs (isBannerEnabled b.crypto) {
@@ -1532,7 +1476,7 @@ let
       signal = 13;
       on-click = "hb-mode-cycle";
       on-click-middle = "${widgetVisibilityScript}/bin/waybar-widget-visibility toggle mode";
-      on-click-right = "hb-command-center";
+      on-click-right = "hb-mode-pick";
     };
   }
   // lib.optionalAttrs (isHudWidgetEnabled w.pi) {
@@ -1613,7 +1557,7 @@ let
       tooltip = true;
       signal = 13;
       on-click = "hb-mode-cycle";
-      on-click-right = "hb-command-center";
+      on-click-right = "hb-mode-pick";
     };
   }
   // lib.optionalAttrs (isOpsWidgetEnabled w.matrix) {
@@ -1825,9 +1769,366 @@ let
         on-click = "hb-lab-deck";
       };
     };
+
+  layoutOrder = [
+    "main"
+    "ops"
+    "infra"
+    "intel"
+    "launch"
+  ];
+  layoutOrderText = lib.concatStringsSep " " layoutOrder;
+
+  layoutStatusScript = pkgs.writeShellApplication {
+    name = "waybar-layout-state";
+    runtimeInputs = with pkgs; [
+      jq
+      coreutils
+    ];
+    text = ''
+      state_dir="''${XDG_STATE_HOME:-$HOME/.local/state}/waybar"
+      layout=$(cat "$state_dir/layout" 2>/dev/null || echo main)
+
+      case "$layout" in
+        main)   text="[ MAIN ]";  role="desktop telemetry" ;;
+        ops)    text="[ OPS ]";   role="security and network mesh" ;;
+        infra)  text="[ INFRA ]"; role="NixOS and service fabric" ;;
+        intel)  text="[ INTEL ]"; role="external intelligence feeds" ;;
+        launch) text="[ DECK ]";  role="operator launch controls" ;;
+        *)      layout="main"; text="[ MAIN ]"; role="desktop telemetry" ;;
+      esac
+
+      tooltip=$(printf '%s\n\nleft / wheel up: next layout\nwheel down: previous layout\nright: layout menu\n\nwaybar-layout main|ops|infra|intel|launch' "$role")
+      jq -cn --arg text "$text" --arg tooltip "$tooltip" --arg class "$layout" \
+        '{text:$text, tooltip:$tooltip, class:$class}'
+    '';
+  };
+
+  layoutCommand = pkgs.writeShellApplication {
+    name = "waybar-layout";
+    runtimeInputs = with pkgs; [
+      coreutils
+      systemd
+      wofi
+    ];
+    text = ''
+      profiles=( ${layoutOrderText} )
+      state_dir="''${XDG_STATE_HOME:-$HOME/.local/state}/waybar"
+      state_file="$state_dir/layout"
+      mkdir -p "$state_dir"
+
+      current=$(cat "$state_file" 2>/dev/null || echo main)
+      case "$current" in
+        main|ops|infra|intel|launch) ;;
+        *) current=main ;;
+      esac
+
+      action="''${1:-status}"
+      case "$action" in
+        status)
+          printf '%s\n' "$current"
+          exit 0
+          ;;
+        menu)
+          action=$(printf '%s\n' "''${profiles[@]}" \
+            | wofi --dmenu --prompt 'waybar layout' || true)
+          [ -n "$action" ] || exit 0
+          ;;
+        next|previous)
+          index=0
+          for i in "''${!profiles[@]}"; do
+            if [ "''${profiles[$i]}" = "$current" ]; then
+              index=$i
+              break
+            fi
+          done
+          if [ "$action" = next ]; then
+            index=$(( (index + 1) % ''${#profiles[@]} ))
+          else
+            index=$(( (index - 1 + ''${#profiles[@]}) % ''${#profiles[@]} ))
+          fi
+          action="''${profiles[$index]}"
+          ;;
+        toggle-launch)
+          if [ "$current" = launch ]; then
+            action=main
+          else
+            action=launch
+          fi
+          ;;
+        help|-h|--help)
+          printf '%s\n' \
+            'usage: waybar-layout <main|ops|infra|intel|launch|next|previous|menu|status>' \
+            '  main    workspaces, focused window and desktop telemetry' \
+            '  ops     security, sessions, VPN/Tor, LAN, uptime and UTC' \
+            '  infra   NixOS, services, backup, containers and virtualisation' \
+            '  intel   weather, market and Hacker News feeds when enabled' \
+            '  launch  Pi, agent, configuration and service controls'
+          exit 0
+          ;;
+      esac
+
+      case "$action" in
+        main|ops|infra|intel|launch) ;;
+        *)
+          printf 'waybar-layout: unknown layout: %s\n' "$action" >&2
+          exit 2
+          ;;
+      esac
+
+      printf '%s\n' "$action" > "$state_file.tmp"
+      mv "$state_file.tmp" "$state_file"
+      systemctl --user --no-block restart waybar.service
+    '';
+  };
+
+  allCustomModules =
+    customModules
+    // hudCustomModules
+    // opsCustomModules
+    // spineCustomModules
+    // {
+      "custom/layout" = {
+        exec = "${layoutStatusScript}/bin/waybar-layout-state";
+        return-type = "json";
+        interval = 2;
+        tooltip = true;
+        on-click = "${layoutCommand}/bin/waybar-layout next";
+        on-click-right = "${layoutCommand}/bin/waybar-layout menu";
+        on-scroll-up = "${layoutCommand}/bin/waybar-layout next";
+        on-scroll-down = "${layoutCommand}/bin/waybar-layout previous";
+      };
+    };
+
+  commonBarConfig = {
+    layer = "top";
+    position = "top";
+    inherit (bar) height;
+    margin-top = bar.margin;
+    margin-left = bar.margin;
+    margin-right = bar.margin;
+    spacing = 3;
+
+    "hyprland/workspaces" = {
+      format = "{icon}";
+      on-click = "activate";
+      format-icons = {
+        "1" = "1";
+        "2" = "2";
+        "3" = "3";
+        "4" = "4";
+        "5" = "5";
+        "6" = "6";
+        "7" = "7";
+        "8" = "8";
+        "9" = "9";
+        "10" = "10";
+      };
+    };
+
+    "hyprland/window" = {
+      format = "{}";
+      max-length = 60;
+      separate-outputs = true;
+      rewrite = {
+        "(.*) - Mozilla Firefox" = " $1";
+        "(.*) - VSCodium" = "󰨞 $1";
+        "(.*) — Kitty" = " $1";
+        "" = "⌁ idle";
+      };
+    };
+
+    network = {
+      format-wifi = "󰤨 {signalStrength}%";
+      format-ethernet = "󰈀 {ifname}";
+      format-disconnected = "󰤭 offline";
+      tooltip-format = "{essid}\n{ipaddr}/{cidr}\n↓ {bandwidthDownBits}  ↑ {bandwidthUpBits}";
+    };
+
+    pulseaudio = {
+      format = "{icon} {volume}%";
+      format-muted = "󰝟 muted";
+      format-icons.default = [
+        "󰕿"
+        "󰖀"
+        "󰕾"
+      ];
+      on-click = "pavucontrol";
+    };
+
+    cpu = {
+      format = " {usage}%";
+      interval = 2;
+      tooltip = true;
+    };
+    memory = {
+      format = " {percentage}%";
+      interval = 5;
+    };
+    temperature = {
+      thermal-zone = 0;
+      critical-threshold = 85;
+      format = " {temperatureC}°C";
+      format-critical = " {temperatureC}°C";
+    };
+    disk = {
+      path = "/";
+      format = " {free}";
+      interval = 30;
+    };
+    clock = {
+      format = " {:%H:%M}";
+      format-alt = " {:%a %d %b %Y}";
+      interval = 60;
+      tooltip-format = "<tt><small>{calendar}</small></tt>";
+    };
+    "clock#utc" = {
+      format = "UTC {:%H:%M}";
+      timezone = "UTC";
+      interval = 60;
+      tooltip-format = "{:%Y-%m-%d %H:%M:%S %Z}";
+    };
+    tray = {
+      icon-size = 16;
+      spacing = 6;
+    };
+
+    "custom/notification" = {
+      tooltip = true;
+      format = "{0} {icon}";
+      format-icons = {
+        notification = "󱅫";
+        none = "󰂜";
+        dnd-notification = "󰂠";
+        dnd-none = "󰪓";
+        inhibited-notification = "󰂛";
+        inhibited-none = "󰪑";
+        dnd-inhibited-notification = "󰂛";
+        dnd-inhibited-none = "󰪑";
+      };
+      return-type = "json";
+      exec-if = "which swaync-client";
+      exec = "swaync-client -swb";
+      on-click = "swaync-client -t -sw";
+      on-click-right = "swaync-client -d -sw";
+      escape = true;
+    };
+  }
+  // allCustomModules;
+
+  mkLayout =
+    {
+      name,
+      center,
+      right,
+    }:
+    commonBarConfig
+    // {
+      inherit name;
+      modules-left = [ "custom/layout" ] ++ mainLeftModules;
+      modules-center = center;
+      modules-right = right;
+    };
+
+  mainBarConfig = mkLayout {
+    name = "main";
+    center = [ "hyprland/window" ];
+    right = (lib.optional w.mode.enable "custom/mode") ++ [
+      "custom/notification"
+      "network"
+      "pulseaudio"
+      "cpu"
+      "memory"
+      "temperature"
+      "disk"
+      "clock"
+      "tray"
+    ];
+  };
+
+  opsBarConfig = mkLayout {
+    name = "ops";
+    center = opsLeftModules;
+    right = opsRightModules ++ [
+      "custom/notification"
+      "tray"
+    ];
+  };
+
+  infraBarConfig = mkLayout {
+    name = "infra";
+    center = spineTopModules;
+    right =
+      spineCenterModules
+      ++ spineBottomModules
+      ++ [
+        "custom/notification"
+        "clock"
+        "tray"
+      ];
+  };
+
+  intelBarConfig = mkLayout {
+    name = "intel";
+    center = if tickerModules == [ ] then [ "hyprland/window" ] else tickerModules;
+    right = bannerControlModules ++ [
+      "custom/notification"
+      "network"
+      "clock"
+      "tray"
+    ];
+  };
+
+  launchBarConfig = mkLayout {
+    name = "launch";
+    center = launchModules;
+    right = [
+      "custom/notification"
+      "network"
+      "pulseaudio"
+      "clock"
+      "tray"
+    ];
+  };
+
+  waybarJson = pkgs.formats.json { };
+  mainConfigFile = waybarJson.generate "waybar-main.json" [ mainBarConfig ];
+  opsConfigFile = waybarJson.generate "waybar-ops.json" [ opsBarConfig ];
+  infraConfigFile = waybarJson.generate "waybar-infra.json" [ infraBarConfig ];
+  intelConfigFile = waybarJson.generate "waybar-intel.json" [ intelBarConfig ];
+  launchConfigFile = waybarJson.generate "waybar-launch.json" [ launchBarConfig ];
+
+  waybarRunner = pkgs.writeShellApplication {
+    name = "waybar-layout-run";
+    runtimeInputs = [
+      unstable.waybar
+      pkgs.coreutils
+    ];
+    text = ''
+      state_file="''${XDG_STATE_HOME:-$HOME/.local/state}/waybar/layout"
+      layout=$(cat "$state_file" 2>/dev/null || echo main)
+
+      case "$layout" in
+        ops) config="${opsConfigFile}" ;;
+        infra) config="${infraConfigFile}" ;;
+        intel) config="${intelConfigFile}" ;;
+        launch) config="${launchConfigFile}" ;;
+        *) config="${mainConfigFile}" ;;
+      esac
+
+      style="''${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style.css"
+      exec waybar -c "$config" -s "$style"
+    '';
+  };
 in
 {
-  home.packages = [ widgetVisibilityScript ];
+  home.packages = [
+    layoutCommand
+    widgetVisibilityScript
+  ];
+
+  systemd.user.services.waybar.Service.ExecStart =
+    lib.mkForce "${waybarRunner}/bin/waybar-layout-run";
 
   programs.waybar = {
     enable = true;
@@ -1837,198 +2138,7 @@ in
       target = "hyprland-session.target";
     };
 
-    settings = {
-      mainBar = {
-        layer = "top";
-        position = "top";
-        height = 30;
-        margin-top = 5;
-        margin-left = 8;
-        margin-right = 8;
-        spacing = 4;
-
-        modules-left = mainLeftModules;
-        modules-center = [ "hyprland/window" ];
-        modules-right =
-          tickerModules
-          ++ bannerControlModules
-          ++ [
-            "custom/notification"
-            "network"
-            "pulseaudio"
-            "cpu"
-            "memory"
-            "temperature"
-            "clock"
-            "tray"
-          ];
-
-        "hyprland/workspaces" = {
-          format = "{icon}";
-          on-click = "activate";
-          format-icons = {
-            "1" = "1";
-            "2" = "2";
-            "3" = "3";
-            "4" = "4";
-            "5" = "5";
-            "6" = "6";
-            "7" = "7";
-            "8" = "8";
-            "9" = "9";
-            "10" = "10";
-          };
-        };
-
-        "hyprland/window" = {
-          format = "{}";
-          max-length = 60;
-          separate-outputs = true;
-          rewrite = {
-            "(.*) - Mozilla Firefox" = " $1";
-            "(.*) - VSCodium" = "󰨞 $1";
-            "(.*) — Kitty" = " $1";
-            "" = " ~ idle";
-          };
-        };
-
-        network = {
-          format-wifi = "󰤨 {signalStrength}%";
-          format-ethernet = "󰈀 {ifname}";
-          format-disconnected = "󰤭 offline";
-          tooltip-format = "{essid}\n{ipaddr}/{cidr}\n↓ {bandwidthDownBits}  ↑ {bandwidthUpBits}";
-        };
-
-        pulseaudio = {
-          format = "{icon} {volume}%";
-          format-muted = "󰝟 muted";
-          format-icons.default = [
-            "󰕿"
-            "󰖀"
-            "󰕾"
-          ];
-          on-click = "pavucontrol";
-        };
-
-        cpu = {
-          format = " {usage}%";
-          interval = 2;
-          tooltip = true;
-        };
-        memory = {
-          format = " {percentage}%";
-          interval = 5;
-        };
-        temperature = {
-          thermal-zone = 0;
-          critical-threshold = 85;
-          format = " {temperatureC}°C";
-          format-critical = " {temperatureC}°C";
-        };
-        disk = {
-          path = "/";
-          format = " {free}";
-          interval = 30;
-        };
-        clock = {
-          format = " {:%H:%M}";
-          format-alt = " {:%a %d %b %Y}";
-          interval = 60;
-          tooltip-format = "<tt><small>{calendar}</small></tt>";
-        };
-        tray = {
-          icon-size = 16;
-          spacing = 6;
-        };
-
-        "custom/notification" = {
-          tooltip = true;
-          format = "{0} {icon}";
-          format-icons = {
-            notification = "󱅫";
-            none = "󰂜";
-            dnd-notification = "󰂠";
-            dnd-none = "󰪓";
-            inhibited-notification = "󰂛";
-            inhibited-none = "󰪑";
-            dnd-inhibited-notification = "󰂛";
-            dnd-inhibited-none = "󰪑";
-          };
-          return-type = "json";
-          exec-if = "which swaync-client";
-          exec = "swaync-client -swb";
-          on-click = "swaync-client -t -sw";
-          on-click-right = "swaync-client -d -sw";
-          escape = true;
-        };
-      }
-      // customModules;
-    }
-    // lib.optionalAttrs hud.enable {
-      hudBar = {
-        name = "hud";
-        layer = "top";
-        inherit (hud) position width;
-        margin-top = hud.marginTop;
-        margin-bottom = if ops.enable && ops.position == "bottom" then 34 else 6;
-        margin-left = 5;
-        margin-right = 5;
-        spacing = 3;
-
-        modules-left = hudModules;
-        modules-center = [ ];
-        modules-right = [ ];
-      }
-      // hudCustomModules;
-    }
-    // lib.optionalAttrs ops.enable {
-      opsBar = {
-        name = "ops";
-        layer = "top";
-        inherit (ops) position height;
-        margin-left = 8;
-        margin-right = 8;
-        spacing = 4;
-
-        modules-left = opsLeftModules;
-        modules-center = opsCenterModules;
-        modules-right = opsRightModules;
-
-        clock = {
-          format = "UTC {:%H:%M}";
-          timezone = "UTC";
-          interval = 60;
-          tooltip-format = "{:%Y-%m-%d %H:%M:%S %Z}";
-        };
-      }
-      // lib.optionalAttrs (ops.width > 0) { inherit (ops) width; }
-      // (if ops.position == "bottom" then { margin-bottom = 5; } else { margin-top = 38; })
-      // opsCustomModules;
-    }
-    // lib.optionalAttrs spine.enable {
-      spineBar = {
-        name = "spine";
-        layer = "top";
-        inherit (spine) position width;
-        margin-top = 40;
-        margin-bottom = if ops.enable && ops.position == "bottom" then 34 else 6;
-        margin-left = 5;
-        margin-right = 5;
-        spacing = 4;
-
-        modules-left = spineTopModules;
-        modules-center = spineCenterModules;
-        modules-right = spineBottomModules;
-
-        clock = {
-          format = "{:%H:%M}";
-          interval = 60;
-          tooltip-format = "{:%A %F}";
-        };
-      }
-      // spineCustomModules;
-    };
-
+    settings.mainBar = mainBarConfig;
     style = ''
       * {
         font-family: "JetBrainsMono Nerd Font", "Font Awesome 6 Free", monospace;
@@ -2043,22 +2153,32 @@ in
         background: ${cssRgba t.surface t.opacity.bar};
         color: ${cssHex t.fg};
         border: 1px solid ${cssRgba t.accent 0.35};
+        border-bottom: 2px solid ${cssRgba t.accent 0.62};
         border-radius: 4px;
       }
 
       window#waybar.ops {
         background: ${cssRgba t.base 0.62};
         border-color: ${cssRgba t.accentSecondary 0.34};
+        border-bottom-color: ${cssRgba t.accentSecondary 0.72};
       }
 
-      window#waybar.spine {
+      window#waybar.infra {
         background: ${cssRgba t.base 0.68};
         border-color: ${cssRgba t.good 0.32};
+        border-bottom-color: ${cssRgba t.good 0.68};
       }
 
-      window#waybar.hud {
+      window#waybar.intel {
+        background: ${cssRgba t.base 0.64};
+        border-color: ${cssRgba t.warn 0.34};
+        border-bottom-color: ${cssRgba t.warn 0.68};
+      }
+
+      window#waybar.launch {
         background: ${cssRgba t.base 0.58};
         border-color: ${cssRgba t.accent 0.42};
+        border-bottom-color: ${cssRgba t.accent 0.76};
       }
 
       #workspaces { margin: 0 4px; }
@@ -2099,6 +2219,7 @@ in
 
       #network, #pulseaudio, #cpu, #memory, #disk, #temperature, #clock, #tray,
       #custom-notification,
+      #custom-layout,
       #custom-mode,
       #custom-crypto, #custom-stocks, #custom-weather, #custom-hn, #custom-banner-toggle,
       #custom-hud-toggle, #custom-hud-mode, #custom-hud-pi, #custom-hud-news,
@@ -2116,68 +2237,98 @@ in
         background: ${cssRgba t.base 0.35};
       }
 
-      window#waybar.hud #custom-hud-toggle,
-      window#waybar.hud #custom-hud-mode,
-      window#waybar.hud #custom-hud-pi,
-      window#waybar.hud #custom-hud-news,
-      window#waybar.hud #custom-hud-config,
-      window#waybar.hud #custom-hud-agents,
-      window#waybar.hud #custom-hud-services {
-        min-width: ${toString hud.tileSize}px;
-        min-height: ${toString hud.tileSize}px;
-        padding: 0;
-        margin: 3px 5px;
+      window#waybar.launch #custom-hud-toggle,
+      window#waybar.launch #custom-hud-mode,
+      window#waybar.launch #custom-hud-pi,
+      window#waybar.launch #custom-hud-news,
+      window#waybar.launch #custom-hud-config,
+      window#waybar.launch #custom-hud-agents,
+      window#waybar.launch #custom-hud-services {
+        min-width: 42px;
+        min-height: 0;
+        padding: 0 9px;
+        margin: 2px 2px;
         border: 1px solid ${cssRgba t.accent 0.26};
         border-radius: 4px;
         font-size: 10px;
         font-weight: 800;
       }
 
-      window#waybar.hud #custom-hud-toggle {
+      window#waybar.launch #custom-hud-toggle {
         color: ${cssHex t.accentSecondary};
         border-color: ${cssRgba t.accentSecondary 0.40};
       }
-      window#waybar.hud #custom-hud-mode {
+      window#waybar.launch #custom-hud-mode {
         color: ${cssHex t.accent};
         border-color: ${cssRgba t.accent 0.45};
       }
-      window#waybar.hud #custom-hud-pi {
+      window#waybar.launch #custom-hud-pi {
         color: ${cssHex t.good};
         border-color: ${cssRgba t.good 0.48};
       }
-      window#waybar.hud #custom-hud-news {
+      window#waybar.launch #custom-hud-news {
         color: ${cssHex t.warn};
         border-color: ${cssRgba t.warn 0.38};
       }
-      window#waybar.hud #custom-hud-config,
-      window#waybar.hud #custom-hud-agents {
+      window#waybar.launch #custom-hud-config,
+      window#waybar.launch #custom-hud-agents {
         color: ${cssHex t.good};
         border-color: ${cssRgba t.good 0.34};
       }
-      window#waybar.hud #custom-hud-services {
+      window#waybar.launch #custom-hud-services {
         color: ${cssHex t.fg};
         border-color: ${cssRgba t.fg 0.24};
       }
 
-      window#waybar.spine #custom-identity,
-      window#waybar.spine #custom-flake,
-      window#waybar.spine #custom-generation,
-      window#waybar.spine #custom-store,
-      window#waybar.spine #custom-cloud,
-      window#waybar.spine #custom-nas,
-      window#waybar.spine #custom-hub,
-      window#waybar.spine #custom-observability,
-      window#waybar.spine #custom-ai,
-      window#waybar.spine #custom-agents,
-      window#waybar.spine #custom-backup,
-      window#waybar.spine #custom-ports,
-      window#waybar.spine #custom-containers,
-      window#waybar.spine #custom-virt,
-      window#waybar.spine #clock {
-        margin: 2px 5px;
-        padding: 0 5px;
-        min-height: 23px;
-        min-width: 50px;
+      window#waybar.infra #custom-identity,
+      window#waybar.infra #custom-flake,
+      window#waybar.infra #custom-generation,
+      window#waybar.infra #custom-store,
+      window#waybar.infra #custom-cloud,
+      window#waybar.infra #custom-nas,
+      window#waybar.infra #custom-hub,
+      window#waybar.infra #custom-observability,
+      window#waybar.infra #custom-ai,
+      window#waybar.infra #custom-agents,
+      window#waybar.infra #custom-backup,
+      window#waybar.infra #custom-ports,
+      window#waybar.infra #custom-containers,
+      window#waybar.infra #custom-virt,
+      window#waybar.infra #clock {
+        margin: 2px 1px;
+        padding: 0 6px;
+        min-height: 0;
+        min-width: 0;
+      }
+
+      #custom-layout {
+        min-width: 62px;
+        padding: 0 10px;
+        color: ${cssHex t.accent};
+        background: ${cssRgba t.accent 0.10};
+        border-left: 2px solid ${cssHex t.accent};
+        border-right: 1px solid ${cssRgba t.accent 0.34};
+        font-weight: 900;
+      }
+      #custom-layout.ops {
+        color: ${cssHex t.accentSecondary};
+        background: ${cssRgba t.accentSecondary 0.10};
+        border-color: ${cssHex t.accentSecondary};
+      }
+      #custom-layout.infra {
+        color: ${cssHex t.good};
+        background: ${cssRgba t.good 0.09};
+        border-color: ${cssHex t.good};
+      }
+      #custom-layout.intel {
+        color: ${cssHex t.warn};
+        background: ${cssRgba t.warn 0.09};
+        border-color: ${cssHex t.warn};
+      }
+      #custom-layout.launch {
+        color: ${cssHex t.accent};
+        background: ${cssRgba t.accent 0.14};
+        border-color: ${cssHex t.accent};
       }
 
       #clock {
@@ -2313,7 +2464,7 @@ in
         border-left: 1px solid ${cssRgba t.fgDim 0.45};
       }
 
-      window#waybar.hud #custom-hud-toggle.down {
+      window#waybar.launch #custom-hud-toggle.down {
         color: ${cssHex t.fgDim};
         background: ${cssRgba t.base 0.35};
         border-color: ${cssRgba t.fgDim 0.32};
@@ -2328,12 +2479,12 @@ in
         min-width: 0;
       }
 
-      window#waybar.hud #custom-hud-mode.hidden,
-      window#waybar.hud #custom-hud-pi.hidden,
-      window#waybar.hud #custom-hud-news.hidden,
-      window#waybar.hud #custom-hud-config.hidden,
-      window#waybar.hud #custom-hud-agents.hidden,
-      window#waybar.hud #custom-hud-services.hidden {
+      window#waybar.launch #custom-hud-mode.hidden,
+      window#waybar.launch #custom-hud-pi.hidden,
+      window#waybar.launch #custom-hud-news.hidden,
+      window#waybar.launch #custom-hud-config.hidden,
+      window#waybar.launch #custom-hud-agents.hidden,
+      window#waybar.launch #custom-hud-services.hidden {
         padding: 0;
         margin: 0;
         background: transparent;

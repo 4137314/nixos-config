@@ -48,6 +48,8 @@ _: {
       diff = "diff --color=auto";
       ip = "ip -c";
       v = "nvim";
+      hub = "hb-term";
+      control = "hb-control-center";
       pideck = "hb-pi";
       piresume = "pi -c";
       pimodels = "pi --list-models";

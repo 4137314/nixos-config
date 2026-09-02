@@ -30,6 +30,7 @@
   config,
   inputs,
   lib,
+  unstable,
   ...
 }:
 let
@@ -61,7 +62,8 @@ let
   hyprRgba = hex: alpha: "rgba(${stripHash hex}${toHex2 alpha})";
 
   # Preserve the unmanaged source file while keeping its generated 0.55 view
-  # free of removed dispatchers and the old asynchronous plugin binding path.
+  # free of removed dispatchers and routing terminal/launcher bindings through
+  # their managed single-instance session wrappers.
   nativeConfig =
     builtins.replaceStrings
       [
@@ -70,6 +72,10 @@ let
         "bind = $mainMod CTRL, J, togglesplit,\n"
         "bind = $mainMod, Tab, hyprexpo:expo, toggle\n"
         "bind = $mainMod, mouse:274, hyprexpo:expo, toggle\n"
+        "bind = $mainMod, Q, exec, kitty\n"
+        "bind = $mainMod, Return, exec, kitty\n"
+        "bind = $mainMod, R, exec, wofi --show drun\n"
+        "bind = $mainMod, D, exec, wofi --show drun\n"
       ]
       [
         "# HyprExpo loading is managed by the Nix compatibility layer.\n"
@@ -77,6 +83,10 @@ let
         "# Hyprland 0.55 replacement is appended by the session UI layer.\n"
         "# HyprExpo binding is installed through an exec dispatcher below.\n"
         "# HyprExpo mouse binding is installed through an exec dispatcher below.\n"
+        "bind = $mainMod, Q, exec, hb-terminal\n"
+        "bind = $mainMod, Return, exec, hb-terminal\n"
+        "bind = $mainMod, R, exec, hb-wofi drun\n"
+        "bind = $mainMod, D, exec, hb-wofi drun\n"
       ]
       (builtins.readFile ./hyprland.conf);
 
@@ -132,6 +142,281 @@ let
       [ -n "$layout" ] || layout="layout"
 
       hyprctl notify 2 1200 "${hyprRgba t.accent 1.0}" "KB $layout" >/dev/null 2>&1 || true
+    '';
+  };
+
+  # Single-instance kitty launcher. Every SUPER+Q / SUPER+Return re-enters
+  # the same kitty process (--single-instance + --instance-group), so a
+  # second press adds a window to the existing cockpit instead of forking
+  # a whole new emulator, and the tmux `hb` session is always the shell.
+  terminalScript = pkgs.writeShellApplication {
+    name = "hb-terminal";
+    runtimeInputs = with pkgs; [
+      kitty
+      tmux
+      coreutils
+    ];
+    text = ''
+      cockpit_init="${cockpitInitScript}/bin/hb-cockpit-init"
+
+      exec kitty \
+        --single-instance \
+        --instance-group hb-terminal \
+        --listen-on unix:@hb-terminal \
+        --class hb-terminal \
+        --title 'HB · cockpit' \
+        -- "$cockpit_init"
+    '';
+  };
+
+  # Interactive bootstrap for the cockpit shell: fixed workspaces plus three
+  # appliance panes (Pi, docs, control). Later kitty windows join the same
+  # session. `ensure_appliance` also upgrades existing hb sessions without
+  # destroying the user's shell, nixos, ops or ad-hoc development windows.
+  cockpitInitScript = pkgs.writeShellApplication {
+    name = "hb-cockpit-init";
+    runtimeInputs = with pkgs; [
+      tmux
+      zsh
+      coreutils
+      gnugrep
+    ];
+    text = ''
+      if [ -n "''${TMUX:-}" ]; then
+        exec zsh -l
+      fi
+
+      mode=$(cat /var/lib/hb-mode/current 2>/dev/null || echo dev)
+      tmux set-environment -g HB_MODE "$mode" >/dev/null 2>&1 || true
+
+      if ! tmux has-session -t hb 2>/dev/null; then
+        tmux new-session  -d -s hb -n shell -c "$HOME"
+        tmux new-window   -t hb:  -n nixos -c /etc/nixos
+        tmux new-window   -t hb:  -n ops   -c "$HOME"
+        tmux set-environment -t hb HB_MODE "$mode" >/dev/null 2>&1 || true
+      fi
+
+      ensure_appliance() {
+        window=$1
+        directory=$2
+        command=$3
+        marker=$4
+
+        if ! tmux list-windows -t hb -F '#{window_name}' | grep -Fxq "$window"; then
+          tmux new-window -d -t hb: -n "$window" -c "$directory" "$command"
+        elif [ "$(tmux show-options -w -v -t "hb:$window" "$marker" 2>/dev/null || true)" != 1 ]; then
+          tmux respawn-pane -k -t "hb:$window" -c "$directory" "$command"
+        fi
+
+        tmux set-option -w -t "hb:$window" "$marker" 1
+        tmux set-option -w -t "hb:$window" @hb-appliance 1
+      }
+
+      ensure_appliance pi /etc/nixos 'exec hb-pi-workspace' @hb-pi-pane
+      ensure_appliance docs /etc/nixos 'exec hb-docs pane' @hb-docs-pane
+      ensure_appliance control "$HOME" 'exec hb-control-center pane' @hb-control-pane
+      tmux select-window -t hb:shell
+
+      exec tmux attach-session -t hb
+    '';
+  };
+
+  # Single-instance wofi. Subsequent SUPER+R / SUPER+D presses toggle the
+  # already visible launcher instead of stacking a second copy over it.
+  # A tiny flock guards against the race where two rapid presses race
+  # through the pgrep check before the first kill takes effect.
+  wofiScript = pkgs.writeShellApplication {
+    name = "hb-wofi";
+    runtimeInputs = with pkgs; [
+      unstable.wofi
+      procps
+      coreutils
+      util-linux
+    ];
+    text = ''
+      mode="''${1:-drun}"
+      case "$mode" in
+        drun|run|dmenu|window|filebrowser) ;;
+        *)
+          printf 'hb-wofi: unknown mode: %s\n' "$mode" >&2
+          exit 2
+          ;;
+      esac
+
+      lock_dir="''${XDG_RUNTIME_DIR:-/tmp}"
+      exec 9>"$lock_dir/hb-wofi.lock"
+      flock -n 9 || exit 0
+
+      if pgrep -x wofi >/dev/null 2>&1; then
+        pkill -x wofi
+        exit 0
+      fi
+
+      exec wofi --show "$mode"
+    '';
+  };
+
+  uiModeScript = pkgs.writeShellApplication {
+    name = "hb-ui-apply";
+    runtimeInputs = [
+      hyprlandPackage
+      unstable.swaynotificationcenter
+      unstable.awww
+      pkgs.coreutils
+      pkgs.findutils
+      pkgs.kitty
+      pkgs.tmux
+      pkgs.wireplumber
+    ];
+    text = ''
+      mode="''${1:---current}"
+      if [ "$mode" = "--current" ]; then
+        mode=$(cat /var/lib/hb-mode/current 2>/dev/null || echo dev)
+      fi
+
+      case "$mode" in
+        study)
+          bar_layout=intel; dnd=on; window_layout=master; volume=45
+          gaps_in=8; gaps_out=18; rounding=10
+          active_opacity=0.96; inactive_opacity=0.84; dim_strength=0.18
+          animations=true; blur=true
+          accent=66d9ff; secondary=bd93f9; background=07111c; foreground=d7e2ff
+          ;;
+        dev)
+          bar_layout=main; dnd=off; window_layout=dwindle; volume=keep
+          gaps_in=4; gaps_out=12; rounding=${toString t.border.rounding}
+          active_opacity=${toString t.opacity.active}; inactive_opacity=${toString t.opacity.inactive}; dim_strength=0.12
+          animations=true; blur=true
+          accent=${lib.removePrefix "#" t.accent}; secondary=${lib.removePrefix "#" t.accentSecondary}; background=${lib.removePrefix "#" t.base}; foreground=${lib.removePrefix "#" t.fg}
+          ;;
+        hack|recon)
+          bar_layout=ops; dnd=on; window_layout=dwindle; volume=keep
+          gaps_in=2; gaps_out=6; rounding=2
+          active_opacity=0.96; inactive_opacity=0.80; dim_strength=0.08
+          animations=true; blur=false
+          accent=00ff88; secondary=ff3355; background=050b08; foreground=d7ffe8
+          ;;
+        work)
+          bar_layout=main; dnd=off; window_layout=master; volume=keep
+          gaps_in=6; gaps_out=10; rounding=6
+          active_opacity=0.98; inactive_opacity=0.88; dim_strength=0.16
+          animations=true; blur=true
+          accent=5ea1ff; secondary=00ffff; background=080d18; foreground=e6edff
+          ;;
+        personal)
+          bar_layout=launch; dnd=off; window_layout=dwindle; volume=keep
+          gaps_in=6; gaps_out=14; rounding=10
+          active_opacity=0.94; inactive_opacity=0.82; dim_strength=0.12
+          animations=true; blur=true
+          accent=ff00ff; secondary=00ffff; background=120718; foreground=f3dcff
+          ;;
+        focus)
+          bar_layout=main; dnd=on; window_layout=master; volume=35
+          gaps_in=10; gaps_out=24; rounding=8
+          active_opacity=1.0; inactive_opacity=0.70; dim_strength=0.30
+          animations=false; blur=true
+          accent=8be9fd; secondary=50fa7b; background=05070a; foreground=f2f8ff
+          ;;
+        night)
+          bar_layout=infra; dnd=on; window_layout=dwindle; volume=25
+          gaps_in=4; gaps_out=10; rounding=8
+          active_opacity=0.92; inactive_opacity=0.74; dim_strength=0.24
+          animations=true; blur=false
+          accent=ffb000; secondary=ff6b6b; background=0d0907; foreground=ffe8bf
+          ;;
+        server)
+          bar_layout=infra; dnd=on; window_layout=master; volume=keep
+          gaps_in=2; gaps_out=4; rounding=2
+          active_opacity=1.0; inactive_opacity=0.86; dim_strength=0.08
+          animations=false; blur=false
+          accent=768096; secondary=00ff88; background=07090f; foreground=d7e2ff
+          ;;
+        *)
+          printf 'hb-ui-apply: unknown mode: %s\n' "$mode" >&2
+          exit 2
+          ;;
+      esac
+
+      state_dir="''${XDG_STATE_HOME:-$HOME/.local/state}/hacker-box"
+      palette_file="$state_dir/kitty-mode.conf"
+      mkdir -p "$state_dir"
+
+      {
+        printf 'background #%s\n' "$background"
+        printf 'foreground #%s\n' "$foreground"
+        printf 'cursor #%s\n' "$accent"
+        printf 'cursor_text_color #%s\n' "$background"
+        printf 'selection_background #%s\n' "$accent"
+        printf 'selection_foreground #%s\n' "$background"
+        printf 'active_border_color #%s\n' "$accent"
+        printf 'inactive_border_color #%s\n' "$secondary"
+        printf 'active_tab_background #%s\n' "$accent"
+        printf 'active_tab_foreground #%s\n' "$background"
+        printf 'inactive_tab_background #%s\n' "$background"
+        printf 'inactive_tab_foreground #%s\n' "$foreground"
+      } > "$palette_file.tmp"
+      mv "$palette_file.tmp" "$palette_file"
+      printf '%s\n' "$mode" > "$state_dir/ui-mode"
+
+      if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+        hyprctl keyword general:gaps_in "$gaps_in" >/dev/null 2>&1 || true
+        hyprctl keyword general:gaps_out "$gaps_out" >/dev/null 2>&1 || true
+        hyprctl keyword general:layout "$window_layout" >/dev/null 2>&1 || true
+        hyprctl keyword general:col.active_border "rgba($accent) rgba($secondary) 45deg" >/dev/null 2>&1 || true
+        hyprctl keyword decoration:rounding "$rounding" >/dev/null 2>&1 || true
+        hyprctl keyword decoration:active_opacity "$active_opacity" >/dev/null 2>&1 || true
+        hyprctl keyword decoration:inactive_opacity "$inactive_opacity" >/dev/null 2>&1 || true
+        hyprctl keyword decoration:dim_strength "$dim_strength" >/dev/null 2>&1 || true
+        hyprctl keyword decoration:blur:enabled "$blur" >/dev/null 2>&1 || true
+        hyprctl keyword decoration:shadow:color "rgba($accent)59" >/dev/null 2>&1 || true
+        hyprctl keyword animations:enabled "$animations" >/dev/null 2>&1 || true
+        hyprctl keyword group:col.border_active "rgba($accent)" >/dev/null 2>&1 || true
+      fi
+
+      if command -v waybar-layout >/dev/null 2>&1; then
+        waybar-layout "$bar_layout" >/dev/null 2>&1 || true
+      fi
+
+      if [ -n "''${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
+        if [ "$dnd" = on ]; then
+          swaync-client --skip-wait --dnd-on >/dev/null 2>&1 || true
+        else
+          swaync-client --skip-wait --dnd-off >/dev/null 2>&1 || true
+        fi
+      fi
+
+      if tmux list-sessions >/dev/null 2>&1; then
+        tmux set-environment -g HB_MODE "$mode" >/dev/null 2>&1 || true
+        tmux refresh-client -S >/dev/null 2>&1 || true
+      fi
+
+      kitty @ --to unix:@hb-terminal set-colors --all --configured "$palette_file" >/dev/null 2>&1 || true
+
+      # Mode-specific wallpaper: any image under ~/Pictures/wallpapers/modes/<mode>/
+      # is preferred over the base rotator when present. Silent no-op otherwise.
+      mode_wall_dir="$HOME/Pictures/wallpapers/modes/$mode"
+      if [ -d "$mode_wall_dir" ]; then
+        mode_wall=$(find "$mode_wall_dir" -type f \
+          \( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' \) \
+          | head -n1)
+        if [ -n "$mode_wall" ] && command -v awww >/dev/null 2>&1; then
+          awww img "$mode_wall" --transition-type fade --transition-duration 1.5 >/dev/null 2>&1 || true
+        fi
+      fi
+
+      # Dampen master output for quiet personas; leave the sink alone for
+      # work/hack/dev/personal/server where the user may already have set
+      # a preferred level.
+      if [ "$volume" != keep ] && [ -n "''${WAYLAND_DISPLAY:-}" ]; then
+        wpctl set-volume @DEFAULT_AUDIO_SINK@ "0.''${volume}" >/dev/null 2>&1 || true
+      fi
+
+      if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+        hyprctl notify -1 2500 "rgba(''${accent}ff)" "MODE · $mode" >/dev/null 2>&1 || true
+      fi
+
+      printf 'ui mode: %s · bar: %s · layout: %s · dnd: %s · vol: %s\n' \
+        "$mode" "$bar_layout" "$window_layout" "$dnd" "$volume"
     '';
   };
 
@@ -423,6 +708,27 @@ let
     '';
   };
 
+  # Graphical mode picker — presents `hb-mode list` through wofi and
+  # dispatches the choice. Used from SUPER+SHIFT+M, the Waybar mode
+  # widget (right-click) and the hb-command-center menu.
+  modePickScript = pkgs.writeShellApplication {
+    name = "hb-mode-pick";
+    runtimeInputs = with pkgs; [
+      unstable.wofi
+      coreutils
+      gnused
+    ];
+    text = ''
+      choice=$(/run/current-system/sw/bin/hb-mode list 2>/dev/null \
+        | sed 's/^  //' \
+        | wofi --dmenu --prompt 'hb-mode' --width 520 --height 360 || true)
+      [ -n "$choice" ] || exit 0
+      mode=$(printf '%s' "$choice" | awk '{print $1}')
+      [ -n "$mode" ] || exit 0
+      /run/current-system/sw/bin/hb-mode "$mode"
+    '';
+  };
+
   modeCycleScript = pkgs.writeShellApplication {
     name = "hb-mode-cycle";
     runtimeInputs = with pkgs; [
@@ -461,6 +767,7 @@ let
       wofi
       hyprlandPackage
       piDeckScript
+      modePickScript
       coreutils
       procps
       systemd
@@ -468,14 +775,20 @@ let
     ];
     text = ''
       choice=$(printf '%s\n' \
+        'mode pick…' \
         'mode study' \
         'mode dev' \
         'mode hack' \
         'mode work' \
         'mode personal' \
-        'widgets toggle' \
-        'widgets show' \
-        'widgets hide' \
+        'mode focus' \
+        'mode night' \
+        'mode server' \
+        'bar main' \
+        'bar ops' \
+        'bar infra' \
+        'bar intel' \
+        'bar launch' \
         'deck agents/config' \
         'deck pi' \
         'deck ops' \
@@ -493,14 +806,20 @@ let
       [ -n "$choice" ] || exit 0
 
       case "$choice" in
+        'mode pick…') hb-mode-pick ;;
         'mode study') /run/current-system/sw/bin/hb-mode study ;;
         'mode dev') /run/current-system/sw/bin/hb-mode dev ;;
         'mode hack') /run/current-system/sw/bin/hb-mode hack ;;
         'mode work') /run/current-system/sw/bin/hb-mode work ;;
         'mode personal') /run/current-system/sw/bin/hb-mode personal ;;
-        'widgets toggle') waybar-widget-visibility toggle-all ;;
-        'widgets show') waybar-widget-visibility show ;;
-        'widgets hide') waybar-widget-visibility hide ;;
+        'mode focus') /run/current-system/sw/bin/hb-mode focus ;;
+        'mode night') /run/current-system/sw/bin/hb-mode night ;;
+        'mode server') /run/current-system/sw/bin/hb-mode server ;;
+        'bar main') waybar-layout main ;;
+        'bar ops') waybar-layout ops ;;
+        'bar infra') waybar-layout infra ;;
+        'bar intel') waybar-layout intel ;;
+        'bar launch') waybar-layout launch ;;
         'deck agents/config') hb-agent-deck ;;
         'deck pi') hb-pi ;;
         'deck ops') hb-ops-deck ;;
@@ -703,6 +1022,11 @@ in
     commandCenterScript
     loadHyprexpoScript
     hyprexpoToggleScript
+    uiModeScript
+    terminalScript
+    cockpitInitScript
+    wofiScript
+    modePickScript
   ];
 
   wayland.windowManager.hyprland = {
@@ -720,6 +1044,7 @@ in
       bind = SUPER, Tab, exec, hb-hyprexpo-toggle
       bind = SUPER, mouse:274, exec, hb-hyprexpo-toggle
       bind = SUPER CTRL, P, exec, hb-pi
+      bind = SUPER SHIFT, M, exec, hb-mode-pick
     '';
   };
 }

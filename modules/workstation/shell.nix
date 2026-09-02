@@ -184,6 +184,8 @@ in
       https = "xh --https";
       logs = "journalctl -f -o short-iso | lnav";
       services = "systemctl-tui";
+      hub = "hb-term";
+      control = "hb-control-center";
       docker-ui = "lazydocker";
       disk = "dua interactive";
       netwatch = "sudo bandwhich";

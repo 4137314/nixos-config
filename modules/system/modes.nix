@@ -31,6 +31,9 @@
   --------------
   A single shell utility `hb-mode` (installed system-wide) toggles
   a whitelisted set of systemd units and emits a desktop notification.
+  Inside the graphical user session it then calls the optional
+  `hb-ui-apply` hook supplied by Home Manager, keeping compositor, Waybar,
+  terminal colours, tmux and notification policy on the same persona.
   Group `hb-modes` grants polkit permission to control those units
   without a password prompt.
 
@@ -161,9 +164,6 @@ let
       jq
       coreutils
       libnotify
-      # `hyprctl` is provided by the running Hyprland session's PATH;
-      # not included here so this module does not pull the whole
-      # compositor into /run/current-system.
     ];
     text = ''
       set -euo pipefail
@@ -175,7 +175,7 @@ let
         cat <<'EOF'
       hb-mode — switch workstation persona
       Usage:
-        hb-mode <mode>     Switch to <mode> (study|dev|hack|work|personal)
+        hb-mode <mode>     Switch to a listed workstation persona
         hb-mode status     Print the currently active mode
         hb-mode list       Print available modes with their descriptions
       EOF
@@ -190,12 +190,6 @@ let
           notify-send -a hb-mode "hb-mode" "$msg" || true
         fi
         echo "$msg"
-      }
-
-      apply_night_shader() {
-        # Best-effort: only meaningful inside a running Hyprland session.
-        command -v hyprctl >/dev/null 2>&1 || return 0
-        hyprctl keyword decoration:screen_shader "" >/dev/null 2>&1 || true
       }
 
       case "''${1:-}" in
@@ -221,11 +215,16 @@ let
       for unit in "''${to_stop[@]}";  do systemctl stop  --no-block "$unit" || true; done
       for unit in "''${to_start[@]}"; do systemctl start --no-block "$unit" || true; done
 
-      if [[ "$mode" == "night" ]]; then apply_night_shader; fi
-
       # Persist the new mode. Requires membership in `hb-modes` (tmpfiles
       # rule gives that group write access).
       echo "$mode" > "$STATE"
+
+      # Home Manager provides the desktop-session half of a persona. The
+      # hook is deliberately optional so boot-time/root invocations remain
+      # independent from a logged-in graphical environment.
+      if command -v hb-ui-apply >/dev/null 2>&1; then
+        hb-ui-apply "$mode" || true
+      fi
 
       msg=$(jq -r --arg m "$mode" '.[$m].message' "$SPEC")
       notify "$msg"

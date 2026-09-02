@@ -10,7 +10,7 @@
   to be edited.
 
   Defaults are compact cyberpunk: cyan + magenta accent, readable blur,
-  ~85% window opacity, compact bars and no always-on long ticker banners.
+  ~85% window opacity and a single top bar with on-demand data layouts.
 
   Every banner is a boolean toggle. Set `myTheme.banners.enable = false`
   to hide the whole feed row, or `myTheme.banners.<name>.enable = false`
@@ -132,81 +132,16 @@ in
       };
     };
 
-    bars = {
-      ops = {
-        enable = mkOption {
-          type = types.bool;
-          default = true;
-          description = "Show the lower operations/security Waybar.";
-        };
-        width = mkOption {
-          type = types.int;
-          default = 0;
-          description = "Fixed width of the operations/security Waybar. 0 = fill the output (full-width).";
-        };
-        height = mkOption {
-          type = types.int;
-          default = 30;
-          description = "Height of the lower operations/security Waybar.";
-        };
-        position = mkOption {
-          type = types.enum [
-            "bottom"
-            "top"
-          ];
-          default = "bottom";
-          description = "Screen edge for the operations/security Waybar.";
-        };
+    bars.command = {
+      height = mkOption {
+        type = types.int;
+        default = 32;
+        description = "Height of the single multi-layout top Waybar.";
       };
-      spine = {
-        enable = mkOption {
-          type = types.bool;
-          default = true;
-          description = "Show the vertical engineering Waybar spine.";
-        };
-        width = mkOption {
-          type = types.int;
-          default = 90;
-          description = "Width of the vertical engineering Waybar spine.";
-        };
-        position = mkOption {
-          type = types.enum [
-            "left"
-            "right"
-          ];
-          default = "right";
-          description = "Screen edge for the engineering Waybar spine.";
-        };
-      };
-      hud = {
-        enable = mkOption {
-          type = types.bool;
-          default = true;
-          description = "Show the square command/widget HUD Waybar.";
-        };
-        width = mkOption {
-          type = types.int;
-          default = 90;
-          description = "Width of the square command/widget HUD.";
-        };
-        tileSize = mkOption {
-          type = types.int;
-          default = 40;
-          description = "Tile height for HUD widgets (width fills the bar).";
-        };
-        position = mkOption {
-          type = types.enum [
-            "left"
-            "right"
-          ];
-          default = "left";
-          description = "Screen edge for the square command/widget HUD.";
-        };
-        marginTop = mkOption {
-          type = types.int;
-          default = 40;
-          description = "Top margin for the square command/widget HUD.";
-        };
+      margin = mkOption {
+        type = types.int;
+        default = 6;
+        description = "Outer margin of the single multi-layout top Waybar.";
       };
     };
 
@@ -277,7 +212,7 @@ in
         enable = mkOption {
           type = types.bool;
           default = true;
-          description = "Show a square news API widget in the HUD.";
+          description = "Show the news API control in the Waybar launch layout.";
         };
         interval = mkOption {
           type = types.int;
@@ -289,7 +224,7 @@ in
         enable = mkOption {
           type = types.bool;
           default = true;
-          description = "Show the Pi pull-up agent launcher in the HUD.";
+          description = "Show the Pi pull-up agent control in the Waybar launch layout.";
         };
         interval = mkOption {
           type = types.int;
@@ -301,7 +236,7 @@ in
         enable = mkOption {
           type = types.bool;
           default = true;
-          description = "Show /etc/nixos configuration intelligence in the HUD.";
+          description = "Show /etc/nixos intelligence in the Waybar launch layout.";
         };
         interval = mkOption {
           type = types.int;
@@ -313,7 +248,7 @@ in
         enable = mkOption {
           type = types.bool;
           default = true;
-          description = "Show autonomous agent and observatory state in the HUD.";
+          description = "Show agent and observatory state in the Waybar launch layout.";
         };
         interval = mkOption {
           type = types.int;
@@ -325,7 +260,7 @@ in
         enable = mkOption {
           type = types.bool;
           default = true;
-          description = "Show compact critical service health in the HUD.";
+          description = "Show compact service health in the Waybar launch layout.";
         };
         interval = mkOption {
           type = types.int;
@@ -409,7 +344,7 @@ in
         enable = mkOption {
           type = types.bool;
           default = false;
-          description = "Show operator/host identity in the engineering spine.";
+          description = "Show operator/host identity in the Waybar infra layout.";
         };
         interval = mkOption {
           type = types.int;
@@ -577,7 +512,7 @@ in
         enable = mkOption {
           type = types.bool;
           default = true;
-          description = "Show uptime and load in the operations bar.";
+          description = "Show uptime and load in the Waybar ops layout.";
         };
         interval = mkOption {
           type = types.int;
@@ -590,8 +525,8 @@ in
     banners = {
       enable = mkOption {
         type = types.bool;
-        default = false;
-        description = "Global switch for all Waybar API/data banners.";
+        default = true;
+        description = "Enable the on-demand Waybar intel feed layout.";
       };
 
       dismissable = mkOption {
@@ -624,7 +559,7 @@ in
       hackerNews = {
         enable = mkOption {
           type = types.bool;
-          default = false;
+          default = true;
           description = "Show scrolling Hacker News top headline.";
         };
         feed = mkOption {

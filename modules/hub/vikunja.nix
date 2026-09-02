@@ -71,42 +71,50 @@
   # deprecated `VIKUNJA_SERVICE_JWTSECRET` name.
   #
   # DynamicUser is used by the upstream module → `vikunja` is not a static
-  # POSIX account. EnvironmentFile= is read as root before dropping
-  # privileges, so root:root 0400 is both sufficient and the safest perms.
+  # POSIX account. The directory must remain traversable because Vikunja reads
+  # the public Nix-generated `/etc/vikunja/config.yaml` after dropping
+  # privileges. EnvironmentFile= is read by systemd before that drop, so the
+  # secret itself remains root:root 0400 and never enters the Nix store.
   # ---------------------------------------------------------------------------
-  systemd.services.vikunja-secret-init = {
-    description = "Generate/migrate Vikunja service secret on first boot";
-    wantedBy = [ "vikunja.service" ];
-    before = [ "vikunja.service" ];
-    path = with pkgs; [
-      openssl
-      coreutils
-      gnugrep
-    ];
-    # NB: no `RemainAfterExit = true` — we want ExecStart to re-run
-    # every time `vikunja.service` is (re)started, so a deleted env
-    # file gets regenerated on the next `systemctl restart vikunja`.
-    # The script is idempotent (skips if the env is well-formed).
-    serviceConfig.Type = "oneshot";
-    script = ''
-      set -euo pipefail
-      install -d -m 0700 -o root -g root /etc/vikunja
+  systemd.services = {
+    # Keep a broken configuration from hammering both Vikunja and its secret
+    # dependency; changing the main unit also guarantees a restart on switch.
+    vikunja.serviceConfig.RestartSec = "5s";
 
-      needs_write=0
-      if [ ! -s /etc/vikunja/env ]; then
-        needs_write=1
-      elif ! grep -q '^VIKUNJA_SERVICE_SECRET=' /etc/vikunja/env; then
-        # Legacy file with only JWTSECRET — upstream deprecated it.
-        # Regenerate with the current variable name.
-        needs_write=1
-      fi
+    vikunja-secret-init = {
+      description = "Generate/migrate Vikunja service secret on first boot";
+      wantedBy = [ "vikunja.service" ];
+      before = [ "vikunja.service" ];
+      path = with pkgs; [
+        openssl
+        coreutils
+        gnugrep
+      ];
+      # NB: no `RemainAfterExit = true` — we want ExecStart to re-run
+      # every time `vikunja.service` is (re)started, so a deleted env
+      # file gets regenerated on the next `systemctl restart vikunja`.
+      # The script is idempotent (skips if the env is well-formed).
+      serviceConfig.Type = "oneshot";
+      script = ''
+        set -euo pipefail
+        install -d -m 0755 -o root -g root /etc/vikunja
 
-      if [ "$needs_write" -eq 1 ]; then
-        umask 077
-        secret=$(openssl rand -hex 32)
-        printf 'VIKUNJA_SERVICE_SECRET=%s\n' "$secret" > /etc/vikunja/env
-        chmod 0400 /etc/vikunja/env
-      fi
-    '';
+        needs_write=0
+        if [ ! -s /etc/vikunja/env ]; then
+          needs_write=1
+        elif ! grep -q '^VIKUNJA_SERVICE_SECRET=' /etc/vikunja/env; then
+          # Legacy file with only JWTSECRET — upstream deprecated it.
+          # Regenerate with the current variable name.
+          needs_write=1
+        fi
+
+        if [ "$needs_write" -eq 1 ]; then
+          umask 077
+          secret=$(openssl rand -hex 32)
+          printf 'VIKUNJA_SERVICE_SECRET=%s\n' "$secret" > /etc/vikunja/env
+          chmod 0400 /etc/vikunja/env
+        fi
+      '';
+    };
   };
 }

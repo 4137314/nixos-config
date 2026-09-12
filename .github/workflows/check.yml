@@ -33,7 +33,7 @@ jobs:
 
       # Warms the Nix store across runs — big win for repeat CI on this flake.
       - name: Enable magic Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@v14
+        uses: DeterminateSystems/magic-nix-cache-action@v15
 
       # Hyprland's flake reads VERSION from a fileset-backed source derivation.
       # A fresh runner must be allowed to realise that tiny source; --no-build
@@ -66,7 +66,7 @@ jobs:
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
       - name: Enable magic Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@v14
+        uses: DeterminateSystems/magic-nix-cache-action@v15
 
       - name: statix (Nix anti-pattern linter)
         run: |
@@ -98,7 +98,7 @@ jobs:
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
       - name: Enable magic Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@v14
+        uses: DeterminateSystems/magic-nix-cache-action@v15
 
       - name: nixfmt --check
         run: |
